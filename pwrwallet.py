@@ -39,8 +39,8 @@ class PWRWallet:
         return "0x" + address_bytes.hex()
 
     def transferPWR(self, to, amount, nonce):
-        # if len(to.strip()) != 42:
-        #     raise RuntimeError("Invalid address")
+        if len(to.strip()) != 42:
+            raise RuntimeError("Invalid address")
         if amount < 0:
             raise RuntimeError("Amount cannot be negative")
         if nonce < 0:
@@ -62,4 +62,9 @@ class PWRWallet:
         final_txn[:33] = txn
         final_txn[33:] = signature
 
-        return broadcast_txn(final_txn)
+        response = broadcast_txn(final_txn)
+        if response.success:
+            txn_hash = Signature.create_tx_hash_hex(final_txn).hex()
+            return "0x" + txn_hash
+        else:
+            return None

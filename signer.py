@@ -20,6 +20,12 @@ class Signature:
         return signature
 
     @staticmethod
+    def create_tx_hash_hex(txn_data):
+        keccak_hash = keccak.new(digest_bits=256)
+        keccak_hash.update(txn_data)
+        return keccak_hash.digest()
+
+    @staticmethod
     def sign_message(private_key, message_bytes):
         keccak_hash = keccak.new(digest_bits=256)
         keccak_hash.update(message_bytes)
