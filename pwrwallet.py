@@ -2,7 +2,7 @@ import coincurve
 from Crypto.Hash import keccak
 import binascii
 from io import BytesIO
-from pwrapisdk import broadcast_txn
+from pwrapisdk import broadcast_txn, get_nonce
 
 from signer import Signature
 
@@ -67,4 +67,18 @@ class PWRWallet:
             txn_hash = Signature.create_tx_hash_hex(final_txn).hex()
             return "0x" + txn_hash
         else:
-            return None
+            raise RuntimeError()
+
+    def transferPWR(self, to, amount):
+
+        nonce = get_nonce(self.getAddress())
+        if not nonce.success:
+            raise RuntimeError(nonce.message)
+
+        return self.transferPWR(to, amount, nonce.data)
+
+    def getNonce(self):
+        nonce = get_nonce(self.getAddress())
+        if not nonce.success:
+            raise RuntimeError(nonce.message)
+        return nonce.data
