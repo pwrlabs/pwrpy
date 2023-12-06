@@ -25,6 +25,6 @@ print("Ethereum Address:", wallet.getAddress())
 
 nonce = wallet.getNonce()
 
-txn_hash = wallet.transferPWR(target_address, 100, 1)
+txn_hash = wallet.sendVmDataTxn(2, [5, 6], 2)
 
 print(txn_hash)

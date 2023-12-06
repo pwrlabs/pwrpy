@@ -77,6 +77,35 @@ class PWRWallet:
 
         return self.transferPWR(to, amount, nonce.data)
 
+    def sendVmDataTxn(self, vmId, data, nonce):
+        if nonce < 0:
+            raise RuntimeError("Nonce cannot be negative")
+        if nonce < self.getNonce():
+            raise RuntimeError("Nonce is too low")
+
+        data_len = len(data)
+
+        buffer = bytearray(13 + data_len)
+        buffer[0] = 5
+        buffer[1:5] = nonce.to_bytes(4, byteorder='big')
+        buffer[5:13] = vmId.to_bytes(8, byteorder='big')
+        buffer[13:] = data
+        txn = bytes(buffer)
+        signature = Signature.sign_message(self.private_key, txn)
+
+        txn_len = len(txn)
+
+        final_txn = bytearray(13 + 65 + data_len)
+        final_txn[:txn_len] = txn
+        final_txn[txn_len:] = signature
+
+        response = broadcast_txn(final_txn)
+        if response.success:
+            txn_hash = Signature.create_tx_hash_hex(final_txn).hex()
+            return "0x" + txn_hash
+        else:
+            raise RuntimeError()
+
     def getNonce(self):
         nonce = get_nonce(self.getAddress())
         if not nonce.success:
