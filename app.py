@@ -22,4 +22,6 @@ print("Private Key:", wallet.getPrivateKey())
 print("Public Key:", wallet.getPublicKey())
 print("Ethereum Address:", wallet.getAddress())
 
-wallet.transferPWR(target_address, 100, 1)
+resp = wallet.transferPWR(target_address, 100, 1)
+
+print(resp)

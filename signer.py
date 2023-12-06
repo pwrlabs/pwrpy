@@ -10,12 +10,9 @@ class Signature:
         keccak_hash = keccak.new(digest_bits=256)
         keccak_hash.update(message.encode("utf-8"))
         message_hash = keccak_hash.digest()
-    # message_hash =  hashlib.sha256().digest()
 
-        # Create a private key object
         private_key = coincurve.PrivateKey(private_key_bytes)
 
-        # Sign the message
         signature = private_key.sign_recoverable(message_hash, hasher=None)
 
         signature = signature[:-1] + bytes([signature[-1] + 27])
@@ -27,11 +24,7 @@ class Signature:
         keccak_hash = keccak.new(digest_bits=256)
         keccak_hash.update(message_bytes)
         message_hash = keccak_hash.digest()
-    # message_hash =  hashlib.sha256().digest()
 
-        # Create a private key object
-
-        # Sign the message
         signature = private_key.sign_recoverable(message_hash, hasher=None)
 
         signature = signature[:-1] + bytes([signature[-1] + 27])

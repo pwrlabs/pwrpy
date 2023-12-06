@@ -2,6 +2,7 @@ import coincurve
 from Crypto.Hash import keccak
 import binascii
 from io import BytesIO
+from pwrapisdk import broadcast_txn
 
 from signer import Signature
 
@@ -61,6 +62,4 @@ class PWRWallet:
         final_txn[:33] = txn
         final_txn[33:] = signature
 
-        print(final_txn.hex())
-
-        # return self.PWRJ.broadcastTxn(final_txn.getvalue())
+        return broadcast_txn(final_txn)
