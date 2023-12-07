@@ -7,7 +7,7 @@ from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives import hashes
 from Crypto.Hash import keccak
-from pwrapisdk import get_nonce
+from pwrapisdk import get_nonce_of_address
 
 from pwrwallet import PWRWallet
 from dotenv import load_dotenv
@@ -25,6 +25,6 @@ print("Ethereum Address:", wallet.getAddress())
 
 nonce = wallet.getNonce()
 
-txn_hash = wallet.sendVmDataTxn(2, [5, 6], 2)
+r = wallet.getBalance()
 
-print(txn_hash)
+print(r)

@@ -6,7 +6,7 @@ from binascii import hexlify
 PRC_NODE_URL = os.environ.get("PRC_NODE_URL")
 
 
-class Response:
+class ApiResponse:
     def __init__(self, success, message, data=None):
         self.success = success
         self.message = message
@@ -25,17 +25,15 @@ def broadcast_txn(txn):
         responseRaw = requests.post(url, data=payload, headers=headers)
 
         response = responseRaw.json()
+        is_ok = responseRaw.status_code == 200
 
-        if responseRaw.status_code != 200:
-            return Response(False, response.get("message"))
-        else:
-            return Response(True, response.get("message"))
+        return ApiResponse(is_ok, response.get("message"))
 
     except Exception as e:
-        return Response(False, str(e))
+        return ApiResponse(False, str(e))
 
 
-def get_nonce(address):
+def get_nonce_of_address(address):
     try:
         url = PRC_NODE_URL + "/nonceOfUser/?userAddress=" + address
         headers = {
@@ -48,9 +46,30 @@ def get_nonce(address):
         response = responseRaw.json()
 
         if responseRaw.status_code != 200:
-            return Response(False, response.get("message"))
+            return ApiResponse(False, response.get("message"))
         else:
-            return Response(True, response.get("message"), response.get("nonce"))
+            return ApiResponse(True, response.get("message"), response.get("nonce"))
 
     except Exception as e:
-        return Response(False, str(e))
+        return ApiResponse(False, str(e))
+
+
+def getBalanceOfAddress(address):
+    try:
+        url = PRC_NODE_URL + "/balanceOf/?userAddress=" + address
+        headers = {
+            "Accept": "application/json",
+            "Content-type": "application/json"
+        }
+
+        responseRaw = requests.get(url, headers=headers)
+
+        response = responseRaw.json()
+
+        if responseRaw.status_code != 200:
+            return ApiResponse(False, response.get("message"))
+        else:
+            return ApiResponse(True, response.get("message"), response.get("balance"))
+
+    except Exception as e:
+        return ApiResponse(False, str(e))
