@@ -2,7 +2,7 @@ import coincurve
 from Crypto.Hash import keccak
 import binascii
 from io import BytesIO
-from pwrapisdk import broadcast_txn, get_nonce_of_address, getBalanceOfAddress
+from pwrapisdk import broadcast_txn, get_nonce_of_address, get_balance_of_address
 
 from signer import Signature
 
@@ -22,28 +22,28 @@ class PWRWallet:
             self.private_key = coincurve.PrivateKey()
         self.public_key = self.private_key.public_key
 
-    def getPrivateKey(self):
+    def get_private_key(self):
         return self.private_key.to_hex()
 
-    def getPublicKey(self):
+    def get_public_key(self):
         public_hex = self.public_key.format(compressed=False).hex()[2:]
         return public_hex
 
-    def getAddress(self):
-        public_hex = self.getPublicKey()
+    def get_address(self):
+        public_hex = self.get_public_key()
         keccak_hash = keccak.new(digest_bits=256)
         keccak_hash.update(bytes.fromhex(public_hex))
         address_bytes = keccak_hash.digest()[-20:]
         return "0x" + address_bytes.hex()
 
-    def getNonce(self):
-        nonce = get_nonce_of_address(self.getAddress())
+    def get_nonce(self):
+        nonce = get_nonce_of_address(self.get_address())
         if not nonce.success:
             raise RuntimeError(nonce.message)
         return nonce.data
 
-    def getBalance(self):
-        balance_result = getBalanceOfAddress(self.getAddress())
+    def get_balance(self):
+        balance_result = get_balance_of_address(self.get_address())
         if not balance_result.success:
             raise RuntimeError(balance_result.message)
         return balance_result.data
@@ -55,9 +55,9 @@ class PWRWallet:
         else:
             return WalletResponse(False, None, response.message)
 
-    def transferPWR(self, to, amount, nonce=None):
+    def transfer_pwr(self, to, amount, nonce=None):
         if nonce is None:
-            nonce_response = get_nonce_of_address(self.getAddress())
+            nonce_response = get_nonce_of_address(self.get_address())
             if not nonce_response.success:
                 return WalletResponse(False, None, nonce_response.message)
             nonce = nonce_response.data
@@ -88,16 +88,16 @@ class PWRWallet:
         response = broadcast_txn(final_txn)
         return self.__create_wallet_response(response, final_txn)
 
-    def sendVmDataTxn(self, vmId, data, nonce=None):
+    def send_vm_data_txn(self, vmId, data, nonce=None):
         if nonce is None:
-            nonce_response = get_nonce_of_address(self.getAddress())
+            nonce_response = get_nonce_of_address(self.get_address())
             if not nonce_response.success:
                 return WalletResponse(False, None, nonce_response.message)
             nonce = nonce_response.data
 
         if nonce < 0:
             raise RuntimeError("Nonce cannot be negative")
-        if nonce < self.getNonce():
+        if nonce < self.get_nonce():
             raise RuntimeError("Nonce is too low")
 
         data_len = len(data)
@@ -121,7 +121,7 @@ class PWRWallet:
 
     def delegate(self, to, amount, nonce=None):
         if nonce is None:
-            nonce_response = get_nonce_of_address(self.getAddress())
+            nonce_response = get_nonce_of_address(self.get_address())
             if not nonce_response.success:
                 return WalletResponse(False, None, nonce_response.message)
             nonce = nonce_response.data
@@ -145,7 +145,7 @@ class PWRWallet:
 
     def withdraw(self, from_wallet, shares_amount, nonce=None):
         if nonce is None:
-            nonce_response = get_nonce_of_address(self.getAddress())
+            nonce_response = get_nonce_of_address(self.get_address())
             if not nonce_response.success:
                 return WalletResponse(False, None, nonce_response.message)
             nonce = nonce_response.data
@@ -167,9 +167,9 @@ class PWRWallet:
         response = broadcast_txn(final_txn)
         return self.__create_wallet_response(response, final_txn)
 
-    def claimVmId(self, vm_id, nonce=None):
+    def claim_vm_id(self, vm_id, nonce=None):
         if nonce is None:
-            nonce_response = get_nonce_of_address(self.getAddress())
+            nonce_response = get_nonce_of_address(self.get_address())
             if not nonce_response.success:
                 return WalletResponse(False, None, nonce_response.message)
             nonce = nonce_response.data
