@@ -48,7 +48,7 @@ class PWRWallet:
             raise RuntimeError(balance_result.message)
         return balance_result.data
 
-    def _create_wallet_response(self, response, final_txn):
+    def __create_wallet_response(self, response, final_txn):
         if response.success:
             txn_hash = Signature.create_tx_hash_hex(final_txn).hex()
             return WalletResponse(True, "0x" + txn_hash)
@@ -86,7 +86,7 @@ class PWRWallet:
         final_txn[33:] = signature
 
         response = broadcast_txn(final_txn)
-        return self._create_wallet_response(response, final_txn)
+        return self.__create_wallet_response(response, final_txn)
 
     def sendVmDataTxn(self, vmId, data, nonce=None):
         if nonce is None:
@@ -117,7 +117,7 @@ class PWRWallet:
         final_txn[txn_len:] = signature
 
         response = broadcast_txn(final_txn)
-        return self._create_wallet_response(response, final_txn)
+        return self.__create_wallet_response(response, final_txn)
 
     def delegate(self, to, amount, nonce=None):
         if nonce is None:
@@ -141,7 +141,7 @@ class PWRWallet:
         final_txn[txn_len:] = signature
 
         response = broadcast_txn(final_txn)
-        return self._create_wallet_response(response, final_txn)
+        return self.__create_wallet_response(response, final_txn)
 
     def withdraw(self, from_wallet, shares_amount, nonce=None):
         if nonce is None:
@@ -165,7 +165,7 @@ class PWRWallet:
         final_txn[txn_len:] = signature
 
         response = broadcast_txn(final_txn)
-        return self._create_wallet_response(response, final_txn)
+        return self.__create_wallet_response(response, final_txn)
 
     def claimVmId(self, vm_id, nonce=None):
         if nonce is None:
@@ -188,4 +188,4 @@ class PWRWallet:
         final_txn[txn_len:] = signature
 
         response = broadcast_txn(final_txn)
-        return self._create_wallet_response(response, final_txn)
+        return self.__create_wallet_response(response, final_txn)
