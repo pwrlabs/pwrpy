@@ -8,7 +8,7 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives import hashes
 from Crypto.Hash import keccak
 from models.Validator import Validator
-from pwrapisdk import get_nonce_of_address, get_block_by_number, get_blocks_count, get_latest_block_number
+from pwrapisdk import PWRPY
 
 from pwrwallet import PWRWallet
 from dotenv import load_dotenv
@@ -28,8 +28,8 @@ print("Ethereum Address:", wallet.get_address())
 nonce = wallet.get_nonce()
 
 r = wallet.get_balance()
-blocks_count = get_latest_block_number()
+blocks_count = PWRPY.get_latest_block_number()
 
-b = get_block_by_number(5)
+b = PWRPY.get_block_by_number(5)
 
 print(r)

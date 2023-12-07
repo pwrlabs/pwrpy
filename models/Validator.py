@@ -1,6 +1,6 @@
 import requests
 from models.Delegator import Delegator
-from pwrapisdk import get_rpc_node_url
+from pwrapisdk import PWRPY
 
 
 class Validator:
@@ -44,7 +44,7 @@ class Validator:
 
     def get_delegators(self):
         try:
-            response = requests.get(get_rpc_node_url(
+            response = requests.get(PWRPY.get_rpc_node_url(
             ) + "/validator/delegatorsOfValidator/?validatorAddress=" + self._address)
 
             # Check if the response was successful

@@ -2,7 +2,7 @@ import coincurve
 from Crypto.Hash import keccak
 import binascii
 from io import BytesIO
-from pwrapisdk import broadcast_txn, get_nonce_of_address, get_balance_of_address
+from pwrapisdk import PWRPY
 
 from signer import Signature
 
@@ -37,13 +37,13 @@ class PWRWallet:
         return "0x" + address_bytes.hex()
 
     def get_nonce(self):
-        nonce = get_nonce_of_address(self.get_address())
+        nonce = PWRPY.get_nonce_of_address(self.get_address())
         if not nonce.success:
             raise RuntimeError(nonce.message)
         return nonce.data
 
     def get_balance(self):
-        balance_result = get_balance_of_address(self.get_address())
+        balance_result = PWRPY.get_balance_of_address(self.get_address())
         if not balance_result.success:
             raise RuntimeError(balance_result.message)
         return balance_result.data
@@ -57,7 +57,7 @@ class PWRWallet:
 
     def transfer_pwr(self, to, amount, nonce=None):
         if nonce is None:
-            nonce_response = get_nonce_of_address(self.get_address())
+            nonce_response = PWRPY.get_nonce_of_address(self.get_address())
             if not nonce_response.success:
                 return WalletResponse(False, None, nonce_response.message)
             nonce = nonce_response.data
@@ -85,12 +85,12 @@ class PWRWallet:
         final_txn[:33] = txn
         final_txn[33:] = signature
 
-        response = broadcast_txn(final_txn)
+        response = PWRPY.broadcast_txn(final_txn)
         return self.__create_wallet_response(response, final_txn)
 
     def send_vm_data_txn(self, vmId, data, nonce=None):
         if nonce is None:
-            nonce_response = get_nonce_of_address(self.get_address())
+            nonce_response = PWRPY.get_nonce_of_address(self.get_address())
             if not nonce_response.success:
                 return WalletResponse(False, None, nonce_response.message)
             nonce = nonce_response.data
@@ -116,12 +116,12 @@ class PWRWallet:
         final_txn[:txn_len] = txn
         final_txn[txn_len:] = signature
 
-        response = broadcast_txn(final_txn)
+        response = PWRPY.broadcast_txn(final_txn)
         return self.__create_wallet_response(response, final_txn)
 
     def delegate(self, to, amount, nonce=None):
         if nonce is None:
-            nonce_response = get_nonce_of_address(self.get_address())
+            nonce_response = PWRPY.get_nonce_of_address(self.get_address())
             if not nonce_response.success:
                 return WalletResponse(False, None, nonce_response.message)
             nonce = nonce_response.data
@@ -140,12 +140,12 @@ class PWRWallet:
         final_txn[:txn_len] = txn
         final_txn[txn_len:] = signature
 
-        response = broadcast_txn(final_txn)
+        response = PWRPY.broadcast_txn(final_txn)
         return self.__create_wallet_response(response, final_txn)
 
     def withdraw(self, from_wallet, shares_amount, nonce=None):
         if nonce is None:
-            nonce_response = get_nonce_of_address(self.get_address())
+            nonce_response = PWRPY.get_nonce_of_address(self.get_address())
             if not nonce_response.success:
                 return WalletResponse(False, None, nonce_response.message)
             nonce = nonce_response.data
@@ -164,12 +164,12 @@ class PWRWallet:
         final_txn[:txn_len] = txn
         final_txn[txn_len:] = signature
 
-        response = broadcast_txn(final_txn)
+        response = PWRPY.broadcast_txn(final_txn)
         return self.__create_wallet_response(response, final_txn)
 
     def claim_vm_id(self, vm_id, nonce=None):
         if nonce is None:
-            nonce_response = get_nonce_of_address(self.get_address())
+            nonce_response = PWRPY.get_nonce_of_address(self.get_address())
             if not nonce_response.success:
                 return WalletResponse(False, None, nonce_response.message)
             nonce = nonce_response.data
@@ -187,5 +187,5 @@ class PWRWallet:
         final_txn[:txn_len] = txn
         final_txn[txn_len:] = signature
 
-        response = broadcast_txn(final_txn)
+        response = PWRPY.broadcast_txn(final_txn)
         return self.__create_wallet_response(response, final_txn)
