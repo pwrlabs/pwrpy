@@ -3,10 +3,11 @@ import requests
 import json
 from binascii import hexlify
 
-from models.Block import Block
-from models.Transactions import Transaction
+from pwrpy.models.Block import Block
+from pwrpy.models.Transactions import Transaction
 
-__PRC_NODE_URL = os.environ.get("PRC_NODE_URL")
+if os.environ.get("PRC_NODE_URL") is None:
+    raise RuntimeError("Please set the PRC_NODE_URL environment variable")
 
 
 class ApiResponse:
@@ -138,10 +139,10 @@ class PWRPY:
             elif response.status_code == 400:
                 error_data = response.json()
                 raise RuntimeError(f"Failed with HTTP error 400 and message: {
-                    error_data.get('message')}")
+                                   error_data.get('message')}")
             else:
                 raise RuntimeError(f"Failed with HTTP error code : {
-                    response.status_code}")
+                                   response.status_code}")
 
         except requests.HTTPError as http_err:
             raise RuntimeError(f"HTTP error occurred: {http_err}")

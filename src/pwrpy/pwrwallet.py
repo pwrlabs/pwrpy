@@ -1,10 +1,9 @@
 import coincurve
 from Crypto.Hash import keccak
 import binascii
-from io import BytesIO
-from pwrapisdk import PWRPY
 
-from signer import Signature
+from src.pwrpy.pwrapisdk import PWRPY
+from src.pwrpy.signer import Signature
 
 
 class WalletResponse:
@@ -50,6 +49,7 @@ class PWRWallet:
 
     def __create_wallet_response(self, response, final_txn):
         if response.success:
+
             txn_hash = Signature.create_tx_hash_hex(final_txn).hex()
             return WalletResponse(True, "0x" + txn_hash)
         else:

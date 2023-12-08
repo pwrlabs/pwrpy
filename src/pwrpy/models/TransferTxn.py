@@ -1,4 +1,4 @@
-from models.Transactions import Transaction
+from pwrpy.models.Transactions import Transaction
 
 
 class TransferTxn(Transaction):

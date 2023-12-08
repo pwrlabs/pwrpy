@@ -1,0 +1,22 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pwrpy"
+version = "1.0.6"
+authors = [
+  { name="PWR Labs", email="devservices@pwrlabs.io" },
+]
+description = "PWRPY is a Python library for interacting with the PWR network. "
+readme = "README.md"
+requires-python = ">=3.12"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+Homepage = "https://github.com/pwrlabs/pwrpy"
+Issues = "https://github.com/pwrlabs/pwrpy/issues"

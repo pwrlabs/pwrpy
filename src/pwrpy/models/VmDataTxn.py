@@ -1,4 +1,4 @@
-from models.Transactions import Transaction
+from src.pwrpy.models.Transactions import Transaction
 
 
 class VmDataTxn(Transaction):
