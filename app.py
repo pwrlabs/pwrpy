@@ -10,7 +10,8 @@ from Crypto.Hash import keccak
 
 from dotenv import load_dotenv
 
-from pwrpy.pwrwallet import PWRWallet
+from src.pwrpy.pwrapisdk import PWRPY
+from src.pwrpy.pwrwallet import PWRWallet
 
 
 load_dotenv(".env")
@@ -26,8 +27,7 @@ print("Private Key:", wallet.get_private_key())
 print("Public Key:", wallet.get_public_key())
 print("Ethereum Address:", wallet.get_address())
 
-nonce = wallet.get_nonce()
+total_validators = PWRPY(os.environ.get("PRC_NODE_URL")
+                         ).get_total_validators_count()
 
-r = wallet.get_balance()
-
-print(r)
+print(total_validators)

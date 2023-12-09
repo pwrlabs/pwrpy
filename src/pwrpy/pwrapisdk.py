@@ -5,6 +5,7 @@ from binascii import hexlify
 
 from pwrpy.models.Block import Block
 from pwrpy.models.Transactions import Transaction
+from pwrpy.models.Validator import Validator
 
 if os.environ.get("PRC_NODE_URL") is None:
     raise RuntimeError("Please set the PRC_NODE_URL environment variable")
@@ -19,20 +20,21 @@ class ApiResponse:
 
 class PWRPY:
     # Replace with the actual RPC node URL
-    __PRC_NODE_URL = os.environ.get("PRC_NODE_URL")
+    __rpc_node_url = None
+    __fee_per_byte = 100
 
-    @staticmethod
-    def get_rpc_node_url():
-        return PWRPY.__PRC_NODE_URL
+    def __init__(self, rpc_node_url) -> None:
+        self.__rpc_node_url = rpc_node_url
 
-    @staticmethod
-    def get_fee_per_byte():
-        return 100
+    def get_rpc_node_url(self):
+        return self.__rpc_node_url
 
-    @staticmethod
-    def broadcast_txn(txn):
+    def get_fee_per_byte(self):
+        return self.__fee_per_byte
+
+    def broadcast_txn(self, txn):
         try:
-            url = PWRPY.__PRC_NODE_URL + "/broadcast/"
+            url = self.get_rpc_node_url() + "/broadcast/"
             headers = {
                 "Accept": "application/json",
                 "Content-type": "application/json"
@@ -49,10 +51,9 @@ class PWRPY:
         except Exception as e:
             return ApiResponse(False, str(e))
 
-    @staticmethod
-    def get_nonce_of_address(address):
+    def get_nonce_of_address(self, address):
         try:
-            url = PWRPY.__PRC_NODE_URL + "/nonceOfUser/?userAddress=" + address
+            url = self.get_rpc_node_url() + "/nonceOfUser/?userAddress=" + address
             headers = {
                 "Accept": "application/json",
                 "Content-type": "application/json"
@@ -70,10 +71,9 @@ class PWRPY:
         except Exception as e:
             return ApiResponse(False, str(e))
 
-    @staticmethod
-    def get_balance_of_address(address):
+    def get_balance_of_address(self, address):
         try:
-            url = PWRPY.__PRC_NODE_URL + "/balanceOf/?userAddress=" + address
+            url = self.get_rpc_node_url() + "/balanceOf/?userAddress=" + address
             headers = {
                 "Accept": "application/json",
                 "Content-type": "application/json"
@@ -91,10 +91,9 @@ class PWRPY:
         except Exception as e:
             return ApiResponse(False, str(e))
 
-    @staticmethod
-    def get_blocks_count():
+    def get_blocks_count(self):
         try:
-            url = PWRPY.__PRC_NODE_URL + "/blocksCount/"
+            url = self.get_rpc_node_url() + "/blocksCount/"
             headers = {
                 "Accept": "application/json",
                 "Content-type": "application/json"
@@ -112,11 +111,11 @@ class PWRPY:
         except Exception as e:
             return ApiResponse(False, str(e))
 
-    @staticmethod
-    def get_block_by_number(block_number):
+    def get_block_by_number(self, block_number):
         try:
+            url = self.get_rpc_node_url()
             response = requests.get(
-                f"{PWRPY.__PRC_NODE_URL}/block/?blockNumber={block_number}")
+                f"{url}/block/?blockNumber={block_number}")
 
             if response.status_code == 200:
                 json_data = response.json().get('block')
@@ -149,8 +148,188 @@ class PWRPY:
         except Exception as err:
             raise RuntimeError(f"An error occurred: {err}")
 
-    @staticmethod
-    def get_latest_block_number():
+    def get_total_validators_count(self):
+        try:
+            url = self.get_rpc_node_url() + "/totalValidatorsCount/"
+            headers = {
+                "Accept": "application/json",
+                "Content-type": "application/json"
+            }
+
+            responseRaw = requests.get(url, headers=headers)
+
+            response = responseRaw.json()
+
+            if responseRaw.status_code != 200:
+                return ApiResponse(False, response.get("message"))
+            else:
+                return ApiResponse(True, response.get("message"), response.get("validatorsCount"))
+
+        except Exception as e:
+            return ApiResponse(False, str(e))
+
+    def get_standby_validators_count(self):
+        try:
+            url = self.get_rpc_node_url() + "/standbyValidatorsCount/"
+            headers = {
+                "Accept": "application/json",
+                "Content-type": "application/json"
+            }
+
+            responseRaw = requests.get(url, headers=headers)
+
+            response = responseRaw.json()
+
+            if responseRaw.status_code != 200:
+                return ApiResponse(False, response.get("message"))
+            else:
+                return ApiResponse(True, response.get("message"), response.get("validatorsCount"))
+
+        except Exception as e:
+            return ApiResponse(False, str(e))
+
+    def get_active_validators_count(self):
+        try:
+            url = self.get_rpc_node_url() + "/activeValidatorsCount/"
+            headers = {
+                "Accept": "application/json",
+                "Content-type": "application/json"
+            }
+
+            responseRaw = requests.get(url, headers=headers)
+
+            response = responseRaw.json()
+
+            if responseRaw.status_code != 200:
+                return ApiResponse(False, response.get("message"))
+            else:
+                return ApiResponse(True, response.get("message"), response.get("validatorsCount"))
+
+        except Exception as e:
+            return ApiResponse(False, str(e))
+
+    def get_all_validators(self):
+        try:
+            response = requests.get(
+                self.get_rpc_node_url() + "/allValidators/")
+
+            if response.status_code == 200:
+                data = response.json()
+                validators = data['validators']
+                validators_list = []
+
+                for validator_data in validators:
+                    # Assuming Validator is a class you have defined elsewhere
+                    validator = Validator(
+                        "0x" + validator_data.get("address"),
+                        validator_data.get("ip"),
+                        validator_data.get("badActor"),
+                        validator_data.get("votingPower"),
+                        validator_data.get("totalShares"),
+                        validator_data.get("delegatorsCount"),
+                        validator_data.get("status")
+                    )
+                    validators_list.append(validator)
+
+                return validators_list
+            else:
+                return ApiResponse(False, response.get("message"))
+
+        except Exception as e:
+            return ApiResponse(False, str(e))
+
+    def get_standby_validators(self):
+        try:
+            url = self.get_rpc_node_url()
+            response = requests.get(url + "/standbyValidators/")
+
+            if response.status_code == 200:
+                data = response.json()
+                validators = data['validators']
+                validators_list = []
+
+                for validator_data in validators:
+                    # Assuming Validator is a class you have defined elsewhere
+                    validator = Validator(
+                        "0x" + validator_data.get("address"),
+                        validator_data.get("ip"),
+                        validator_data.get("badActor"),
+                        validator_data.get("votingPower"),
+                        validator_data.get("totalShares"),
+                        validator_data.get("delegatorsCount"),
+                        validator_data.get("status")
+                    )
+                    validators_list.append(validator)
+
+                return validators_list
+            else:
+                return ApiResponse(False, response.get("message"))
+
+        except Exception as e:
+            return ApiResponse(False, str(e))
+
+    def get_active_validators(self):
+        try:
+            url = self.get_rpc_node_url()
+            response = requests.get(
+                url + "/activeValidators/")
+
+            if response.status_code == 200:
+                data = response.json()
+                validators = data['validators']
+                validators_list = []
+
+                for validator_data in validators:
+                    # Assuming Validator is a class you have defined elsewhere
+                    validator = Validator(
+                        "0x" + validator_data.get("address"),
+                        validator_data.get("ip"),
+                        validator_data.get("badActor"),
+                        validator_data.get("votingPower"),
+                        validator_data.get("totalShares"),
+                        validator_data.get("delegatorsCount"),
+                        validator_data.get("status")
+                    )
+                    validators_list.append(validator)
+
+                return validators_list
+            else:
+                return ApiResponse(False, response.get("message"))
+
+        except Exception as e:
+            return ApiResponse(False, str(e))
+
+    def get_owner_of_vm(self, vm_id):
+        try:
+            url = self.get_rpc_node_url()
+            response = requests.get(
+                f"{url}/ownerOfVmId/?vmId={vm_id}")
+
+            if response.status_code == 200:
+                data = response.json()
+                return data["owner"]
+            else:
+                return ApiResponse(False, response.get("message"))
+
+        except Exception as e:
+            return ApiResponse(False, str(e))
+
+    def update_fee_per_byte(self):
+        try:
+            url = self.get_rpc_node_url()
+            response = requests.get(f"{url}/feePerByte/")
+
+            if response.status_code == 200:
+                data = response.json()
+                self.__fee_per_byte = data["feePerByte"]
+                return self.__fee_per_byte
+            else:
+                return ApiResponse(False, response.get("message"))
+
+        except Exception as e:
+            return ApiResponse(False, str(e))
+
+    def get_latest_block_number(self):
         response = PWRPY.get_blocks_count()
         if not response.success:
             return ApiResponse(False, response.get("message"))
