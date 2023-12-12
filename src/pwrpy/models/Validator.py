@@ -1,6 +1,5 @@
 import requests
 from pwrpy.models.Delegator import Delegator
-from pwrpy.pwrapisdk import PWRPY
 
 
 class Validator:
@@ -42,10 +41,10 @@ class Validator:
     def status(self):
         return self._status
 
-    def get_delegators(self):
+    def get_delegators(self, rpc_node_url):
         try:
-            response = requests.get(PWRPY.get_rpc_node_url(
-            ) + "/validator/delegatorsOfValidator/?validatorAddress=" + self._address)
+            response = requests.get(
+                rpc_node_url + "/validator/delegatorsOfValidator/?validatorAddress=" + self._address)
 
             # Check if the response was successful
             if response.status_code == 200:
@@ -64,10 +63,12 @@ class Validator:
             elif response.status_code == 400:
                 # If the response was a client error, raise an exception
                 data = response.json()
-                raise RuntimeError(f"Failed with HTTP error 400 and message: {data['message']}")
+                raise RuntimeError(f"Failed with HTTP error 400 and message: {
+                                   data['message']}")
             else:
                 # If the response was another kind of error, raise an exception
-                raise RuntimeError(f"Failed with HTTP error code: {response.status_code}")
+                raise RuntimeError(f"Failed with HTTP error code: {
+                                   response.status_code}")
 
         except requests.HTTPError as http_err:
             raise RuntimeError(f"HTTP error occurred: {http_err}")

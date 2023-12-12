@@ -330,7 +330,7 @@ class PWRPY:
             return ApiResponse(False, str(e))
 
     def get_latest_block_number(self):
-        response = PWRPY.get_blocks_count()
+        response = self.get_blocks_count()
         if not response.success:
             return ApiResponse(False, response.get("message"))
 

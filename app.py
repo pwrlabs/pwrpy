@@ -10,8 +10,8 @@ from Crypto.Hash import keccak
 
 from dotenv import load_dotenv
 
-from src.pwrpy.pwrapisdk import PWRPY
-from src.pwrpy.pwrwallet import PWRWallet
+from pwrpy.pwrapisdk import PWRPY
+from pwrpy.pwrwallet import PWRWallet
 
 
 load_dotenv(".env")
