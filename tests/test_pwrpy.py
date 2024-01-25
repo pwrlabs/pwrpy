@@ -4,7 +4,7 @@ import os
 from pwrpy.pwrapisdk import PWRPY
 from pwrpy.pwrwallet import PWRWallet
 
-wallet = PWRWallet(pwrsdk=PWRPY(os.environ.get("PRC_NODE_URL")),
+wallet = PWRWallet(pwrsdk=PWRPY(),
                    private_key_hex=os.environ.get("PRIVATE_KEY_HEX"))
 
 
@@ -29,7 +29,7 @@ def test_get_nonce():
 
 
 def test_transfer_pwr():
-    wallet2 = PWRWallet(pwrsdk=PWRPY(os.environ.get("PRC_NODE_URL")))
+    wallet2 = PWRWallet(pwrsdk=PWRPY())
     r = wallet.transfer_pwr(wallet2.get_address(), 1)
 
     assert r.success == True
@@ -46,7 +46,7 @@ def test_send_vm_data_txn():
 
 
 def test_delegate():
-    wallet2 = PWRWallet(pwrsdk=PWRPY(os.environ.get("PRC_NODE_URL")))
+    wallet2 = PWRWallet(pwrsdk=PWRPY())
 
     r = wallet.delegate(wallet2.get_address(), 10000000)
     print("Nonce: " + str(wallet.get_nonce()))

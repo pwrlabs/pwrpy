@@ -12,22 +12,28 @@ from dotenv import load_dotenv
 
 from pwrpy.pwrapisdk import PWRPY
 from pwrpy.pwrwallet import PWRWallet
+from pwrpy.signer import Signature
 
 
 load_dotenv(".env")
 
 
-PRIVATE_KEY_HEX = os.environ.get("PRIVATE_KEY_HEX")
+# PRIVATE_KEY_HEX = os.environ.get("PRIVATE_KEY_HEX")
 
 
-wallet = PWRWallet(PRIVATE_KEY_HEX)
+wallet = PWRWallet(PWRPY(),
+                   "ebf3a1c0654c8dd7700070b5a280d34d7ea3a1dc9d781dfc3af49443ffd1cc65")
 target_address = "0xe744afead6a2115a3515506868840681c29f67e0"
 
 print("Private Key:", wallet.get_private_key())
 print("Public Key:", wallet.get_public_key())
 print("Ethereum Address:", wallet.get_address())
-
-total_validators = PWRPY(os.environ.get("PRC_NODE_URL")
-                         ).get_total_validators_count()
+print("Signed Message:", Signature.sign_message_hex(
+    "ebf3a1c0654c8dd7700070b5a280d34d7ea3a1dc9d781dfc3af49443ffd1cc65", "Hello!").hex())
+print("Signed Message:", Signature.sign_message_hex(
+    "ebf3a1c0654c8dd7700070b5a280d34d7ea3a1dc9d781dfc3af49443ffd1cc65", "Hello World!!").hex())
+print("Signed Message:", Signature.sign_message_hex(
+    "ebf3a1c0654c8dd7700070b5a280d34d7ea3a1dc9d781dfc3af49443ffd1cc65", "How are you? This is some text").hex())
+total_validators = PWRPY().get_total_validators_count()
 
 print(total_validators)

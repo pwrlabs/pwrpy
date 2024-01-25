@@ -7,9 +7,6 @@ from pwrpy.models.Block import Block
 from pwrpy.models.Transactions import Transaction
 from pwrpy.models.Validator import Validator
 
-if os.environ.get("PRC_NODE_URL") is None:
-    raise RuntimeError("Please set the PRC_NODE_URL environment variable")
-
 
 class ApiResponse:
     def __init__(self, success, message, data=None):
@@ -19,18 +16,17 @@ class ApiResponse:
 
 
 class PWRPY:
-    # Replace with the actual RPC node URL
-    __rpc_node_url = None
+    __rpc_node_url = "https://pwrrpc.pwrlabs.io/"
     __fee_per_byte = 100
-
-    def __init__(self, rpc_node_url) -> None:
-        self.__rpc_node_url = rpc_node_url
 
     def get_rpc_node_url(self):
         return self.__rpc_node_url
 
     def get_fee_per_byte(self):
         return self.__fee_per_byte
+
+    def set_rpc_node_url(self, url):
+        self.__rpc_node_url = url
 
     def broadcast_txn(self, txn):
         try:

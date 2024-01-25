@@ -6,5 +6,3 @@ It provides an easy interface for wallet management and sending transactions on 
 ## Installation
 
 Run: `pip install pwrpy`
-
-The library needs the `PRC_NODE_URL` environment variable set to https://pwrrpc.pwrlabs.io/.
