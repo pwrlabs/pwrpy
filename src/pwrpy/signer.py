@@ -1,5 +1,5 @@
 import coincurve
-from Crypto.Hash import keccak
+from crypto.Hash import keccak
 
 
 class Signature:

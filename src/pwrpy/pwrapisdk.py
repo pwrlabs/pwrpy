@@ -1,13 +1,14 @@
-import binascii
 import hashlib
 import json
 import requests
 from requests.exceptions import Timeout, RequestException
 from binascii import hexlify
 
+from pwrpy.models.Transaction import TxnForGuardianApproval
+from pwrpy.models.Transaction import Transaction
+from pwrpy.models.Transaction import VmDataTxn
 from pwrpy.models.Block import Block
 from pwrpy.models.Validator import Validator
-from pwrpy.models.VmDataTxn import VmDataTxn
 
 
 class ApiResponse:
@@ -87,7 +88,6 @@ class PWRPY:
         try:
             timeout = 3
             url = self.__rpc_node_url + "/broadcast/"
-
             data = {
                 "txn": txn.hex()
             }
@@ -101,11 +101,11 @@ class PWRPY:
 
             if response.status_code == 200:
                 txnHash = "0x" + hashlib.sha3_256(txn).hexdigest()
-                return ApiResponse(True,  None,bytes.fromhex(txnHash[2:]))
+                return ApiResponse(True,  None, bytes.fromhex(txnHash[2:]))
             elif response.status_code == 400:
                 error_message = json.loads(response.text)["message"]
                 print("broadcast response:", response.text)
-                return ApiResponse(False, error_message,None, )
+                return ApiResponse(False, error_message, None, )
             else:
                 raise RuntimeError("Failed with HTTP error code: " + str(response.status_code))
 
@@ -222,7 +222,7 @@ class PWRPY:
 
                 for validator_data in validators:
                     validator = Validator(
-                        "0x" + validator_data.get("address"),
+                        validator_data.get("address"),
                         validator_data.get("ip"),
                         validator_data.get("badActor", False),
                         validator_data.get("votingPower", 0),
@@ -250,7 +250,7 @@ class PWRPY:
                 for validator_data in validators:
                     # Assuming Validator is a class you have defined elsewhere
                     validator = Validator(
-                        "0x" + validator_data.get("address"),
+                        validator_data.get("address"),
                         validator_data.get("ip"),
                         validator_data.get("badActor", False),
                         validator_data.get("votingPower", 0),
@@ -279,7 +279,7 @@ class PWRPY:
                 for validator_data in validators:
                     # Assuming Validator is a class you have defined elsewhere
                     validator = Validator(
-                        "0x" + validator_data.get("address"),
+                        validator_data.get("address"),
                         validator_data.get("ip"),
                         validator_data.get("badActor", False),
                         validator_data.get("votingPower", 0),
@@ -372,7 +372,7 @@ class PWRPY:
         delegatees = []
         for validator_object in validator_objects:
             validator = Validator(
-                address="0x" + validator_object.get('address'),
+                address= validator_object.get('address'),
                 ip=validator_object.get('ip'),
                 bad_actor=validator_object.get('badActor'),
                 voting_power=validator_object.get('votingPower'),
@@ -389,7 +389,7 @@ class PWRPY:
         data = response.json()
         validator_object = data.get('validator')
         validator = Validator(
-            address="0x" + validator_object.get('address'),
+            address= validator_object.get('address'),
             ip=validator_object.get('ip'),
             bad_actor=validator_object.get('badActor'),
             voting_power=validator_object.get('votingPower'),
@@ -410,3 +410,29 @@ class PWRPY:
         response = get_response(url)
         data = response.json()
         return data.get('shareValue')
+
+    def is_transaction_valid_for_guardian_approval(self, txn):
+        try:
+            if type(txn) in [bytes, bytearray]:
+                txn = txn.hex()
+
+            timeout = 3
+            url = f"{self.__rpc_node_url}/isTransactionValidForGuardianApproval/"
+            data = {
+                "txn": txn
+            }
+            headers = {
+                "Accept": "application/json",
+                "Content-Type": "application/json"
+            }
+
+            response = requests.post(url, json=data, headers=headers, timeout=timeout)
+            data = response.json()
+            is_valid = data.get('valid')
+            if is_valid:
+                return TxnForGuardianApproval(is_valid, None, Transaction.from_json(data))
+            else:
+                raise RuntimeError("Failed with HTTP error code: " + str(response.status_code))
+
+        except Exception as e:
+            print(f"An error occurred: {e}")

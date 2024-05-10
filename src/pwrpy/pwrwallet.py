@@ -1,8 +1,8 @@
+import io
 import time
 
 import coincurve
 from Crypto.Hash import keccak
-import binascii
 import struct
 from pwrpy.pwrapisdk import PWRPY
 from pwrpy.signer import Signature
@@ -133,17 +133,11 @@ class PWRWallet:
     ### Transaction Base
 
     def get_txn_base(self, identifier, nonce):
-        # Create a byte buffer with a capacity of 6 bytes
         buffer = bytearray(6)
-
-        # Pack the identifier and nonce into the byte buffer
-        struct.pack_into('c', buffer, 0, identifier)  # Pack identifier as a single byte
-        struct.pack_into('>i', buffer, 1, nonce)  # Pack nonce as a 4-byte integer
-
-        # Replace the second byte in the buffer with the chain ID
-        chain_id = self.pwrsdk.get_chainId()  # Example chain ID as a byte
+        struct.pack_into('c', buffer, 0, identifier)
+        struct.pack_into('>i', buffer, 1, nonce)
+        chain_id = self.pwrsdk.get_chainId()
         buffer[1:2] = chain_id
-
         return bytes(buffer)
 
     def get_signed_txn(self, txn):
@@ -340,7 +334,8 @@ class PWRWallet:
             response = self.pwrsdk.broadcast_txn(self.get_signed_withdraw_pwr_txn(from_address, pwr_amount, nonce))
             return self.__create_wallet_response(response, response.data)
         else:
-            response = self.pwrsdk.broadcast_txn(self.get_signed_withdraw_pwr_txn(from_address, pwr_amount, self.get_nonce()))
+            response = self.pwrsdk.broadcast_txn(
+                self.get_signed_withdraw_pwr_txn(from_address, pwr_amount, self.get_nonce()))
             return self.__create_wallet_response(response, response.data)
 
     ### Send VM Data Transactions
@@ -494,7 +489,8 @@ class PWRWallet:
             response = self.pwrsdk.broadcast_txn(self.get_signed_send_guardian_wrapped_transaction_txn(txn, nonce))
             return self.__create_wallet_response(response, response.data)
         else:
-            response = self.pwrsdk.broadcast_txn(self.get_signed_send_guardian_wrapped_transaction_txn(txn, self.get_nonce().data))
+            response = self.pwrsdk.broadcast_txn(
+                self.get_signed_send_guardian_wrapped_transaction_txn(txn, self.get_nonce().data))
             return self.__create_wallet_response(response, response.data)
 
     ### Payable VM Data Transactions
@@ -553,3 +549,169 @@ class PWRWallet:
             nonce = self.get_nonce()
         response = self.pwrsdk.broadcast_txn(self.get_signed_send_validator_remove_txn(validator, nonce))
         return self.__create_wallet_response(response, response.data)
+
+    ### Conduit transactions (approve, set, add, remove)
+    def get_conduit_approval_txn(self, vm_id, txns, nonce):
+        if nonce < 0:
+            raise RuntimeError("Nonce cannot be negative")
+        if len(txns) == 0:
+            raise RuntimeError("No transactions to approve")
+
+        txn_base = self.get_txn_base(b'\x0C', nonce)
+        buffer = io.BytesIO()
+        buffer.write(txn_base)
+        buffer.write(vm_id.to_bytes(8, 'big'))
+
+        for txn in txns:
+            buffer.write(len(txn).to_bytes(4, 'big'))
+            buffer.write(txn)
+
+        return buffer.getvalue()
+
+    def get_signed_conduit_approval_txn(self, vm_id, txns, nonce: int):
+        try:
+            return self.get_signed_txn(self.get_conduit_approval_txn(vm_id, txns, nonce))
+        except InterruptedError as e:
+            print(f"An error occurred:{e}")
+        except IOError as e:
+            print(f"An error occurred:{e}")
+
+    def conduit_approve(self, vm_id, txns, nonce: int = None):
+        try:
+            if not nonce:
+                nonce = self.get_nonce()
+
+            response = self.pwrsdk.broadcast_txn(self.get_signed_conduit_approval_txn(vm_id, txns, nonce))
+            return self.__create_wallet_response(response,  response.data)
+        except IOError as e:
+            print(f"An error occurred:{e}")
+
+    def get_set_conduits_txn(self, vm_id, conduits, nonce):
+        if nonce < 0:
+            raise RuntimeError("Nonce cannot be negative")
+        if len(conduits) == 0:
+            raise RuntimeError("No transactions to approve")
+
+        txn_base = self.get_txn_base(b'\x0D', nonce)
+        buffer = io.BytesIO()
+        buffer.write(txn_base)
+        buffer.write(vm_id.to_bytes(8, 'big'))
+
+        for conduit in conduits:
+            buffer.write(len(conduit).to_bytes(4, 'big'))
+            buffer.write(conduit)
+
+        return buffer.getvalue()
+
+    def get_signed_set_conduit_txn(self, vm_id, conduits, nonce: int):
+        try:
+            return self.get_signed_txn(self.get_set_conduits_txn(vm_id, conduits, nonce))
+        except InterruptedError as e:
+            print(f"An error occurred:{e}")
+        except IOError as e:
+            print(f"An error occurred:{e}")
+
+    def set_conduits(self, vm_id, conduits, nonce: int = None):
+        try:
+            if not nonce:
+                nonce = self.get_nonce()
+
+            response = self.pwrsdk.broadcast_txn(self.get_signed_set_conduit_txn(vm_id, conduits, nonce))
+            return self.__create_wallet_response(response, response.data)
+        except InterruptedError as e:
+            print(f"An error has occurred:{e}")
+        except IOError as e:
+            print(f"An error has occurred:{e}")
+
+    def get_add_conduits_txn(self, vm_id: int, conduits: list, nonce: int):
+        try:
+            if nonce < 0:
+                raise ValueError("Nonce cannot be negative")
+            if len(conduits) == 0:
+                raise ValueError("No transactions to approve")
+
+            txn_base = self.get_txn_base(b'\x0E', nonce)
+            total_conduit_length = sum(len(conduit) for conduit in conduits)
+            buffer_size = len(txn_base) + 8 + (len(conduits) * 4) + total_conduit_length
+            buffer = bytearray(buffer_size)
+
+            struct.pack_into(f'{len(txn_base)}s', buffer, 0, txn_base)  # Pack txnBase
+            struct.pack_into('>q', buffer, len(txn_base), vm_id)  # Pack vmId as long
+
+            offset = len(txn_base) + 8
+            for conduit in conduits:
+                struct.pack_into('>i', buffer, offset, len(conduit))  # Pack conduit length
+                offset += 4
+                buffer[offset:offset + len(conduit)] = conduit  # Pack conduit
+                offset += len(conduit)
+
+            return bytes(buffer)
+        except InterruptedError as e:
+            print(f"An error has occurred:{e}")
+        except IOError as e:
+            print(f"An error has occurred:{e}")
+
+    def get_signed_add_conduits_txn(self, vm_id, conduits, nonce):
+        try:
+            return self.get_signed_txn(self.get_add_conduits_txn(vm_id, conduits, nonce))
+        except InterruptedError as e:
+            print(f"An error has occurred:{e}")
+        except IOError as e:
+            print(f"An error has occurred:{e}")
+
+    def add_conduits(self, vm_id, conduits, nonce):
+        try:
+            if not nonce:
+                nonce = self.get_nonce()
+            response = self.pwrsdk.broadcast_txn(self.get_signed_add_conduits_txn(vm_id, conduits, nonce))
+            return self.__create_wallet_response(response, response.data)
+        except IOError as e:
+            print(f"An error has occurred:{e}")
+
+    def get_remove_conduits_txn(self, vm_id: int, conduits: list, nonce: int):
+        try:
+            if nonce < 0:
+                raise RuntimeError("Nonce cannot be negative")
+            if len(conduits) == 0:
+                raise RuntimeError("No transactions to approve")
+
+            txn_base = self.get_txn_base(b'\x0F', nonce)
+            total_conduit_length = sum(len(conduit) for conduit in conduits)
+            buffer_size = len(txn_base) + 8 + (len(conduits) * 4) + total_conduit_length
+            buffer = bytearray(buffer_size)
+
+            struct.pack_into(f'{len(txn_base)}s', buffer, 0, txn_base)
+            struct.pack_into('>q', buffer, len(txn_base), vm_id)
+
+            offset = len(txn_base) + 8
+            for conduit in conduits:
+                struct.pack_into('>i', buffer, offset, len(conduit))
+                offset += 4
+                buffer[offset:offset + len(conduit)] = conduit
+                offset += len(conduit)
+
+            return bytes(buffer)
+        except InterruptedError as e:
+            print(f"An error has occurred:{e}")
+        except IOError as e:
+            print(f"An error has occurred:{e}")
+
+    def get_signed_remove_conduit_txn(self, vm_id, conduits, nonce):
+        try:
+            return self.get_signed_txn(self.get_remove_conduits_txn(vm_id, conduits, nonce))
+        except InterruptedError as e:
+            print(f"An error has occurred:{e}")
+        except IOError as e:
+            print(f"An error has occurred:{e}")
+
+    def remove_conduits(self, vm_id, conduits, nonce):
+        try:
+            if not nonce:
+                nonce = self.get_nonce()
+            response = self.pwrsdk.broadcast_txn(self.get_signed_remove_conduit_txn(vm_id, conduits, nonce))
+            return self.__create_wallet_response(response, response.data)
+
+        except InterruptedError as e:
+            print(f"An error has occurred:{e}")
+        except IOError as e:
+            print(f"An error has occurred:{e}")
