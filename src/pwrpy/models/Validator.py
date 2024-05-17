@@ -1,5 +1,5 @@
 import requests
-from pwrpy.models.Delegator import Delegator
+from src.pwrpy.models.Delegator import Delegator
 
 
 class Validator:
@@ -12,6 +12,17 @@ class Validator:
         self._delegators_count = delegators_count
         self._delegators = []
         self._status = status
+
+    @classmethod
+    def from_json(cls, json_data):
+        address = json_data.get("address", None)
+        ip = json_data.get("ip", None)
+        bad_actor = json_data.get("isBadActor", False)
+        voting_power = json_data.get("votingPower", 0)
+        shares = json_data.get("shares", 0)
+        delegators_count = json_data.get("delegatorsCount", 0)
+        status = json_data.get("status", None)
+        return cls(address, ip, bad_actor, voting_power, shares, delegators_count, status)
 
     @property
     def address(self):

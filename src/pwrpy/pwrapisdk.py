@@ -4,18 +4,11 @@ import requests
 from requests.exceptions import Timeout, RequestException
 from binascii import hexlify
 
-from pwrpy.models.Transaction import TxnForGuardianApproval
-from pwrpy.models.Transaction import Transaction
-from pwrpy.models.Transaction import VmDataTxn
-from pwrpy.models.Block import Block
-from pwrpy.models.Validator import Validator
-
-
-class ApiResponse:
-    def __init__(self, success, message, data=None):
-        self.success = success
-        self.message = message
-        self.data = data
+from src.pwrpy.models.Transaction import Transaction
+from src.pwrpy.models.Transaction import VmDataTransaction
+from src.pwrpy.models.Block import Block
+from src.pwrpy.models.Validator import Validator
+from src.pwrpy.models.Response import ApiResponse, TransactionForGuardianApproval
 
 
 def get_response(url: str, timeout: int = 5):
@@ -84,7 +77,7 @@ class PWRPY:
         version = data.get('blockchainVersion')
         return version
 
-    def broadcast_txn(self, txn):
+    def broadcast_transaction(self, txn):
         try:
             timeout = 3
             url = self.__rpc_node_url + "/broadcast/"
@@ -101,7 +94,7 @@ class PWRPY:
 
             if response.status_code == 200:
                 txnHash = "0x" + hashlib.sha3_256(txn).hexdigest()
-                return ApiResponse(True,  None, bytes.fromhex(txnHash[2:]))
+                return ApiResponse(True, None, bytes.fromhex(txnHash[2:]))
             elif response.status_code == 400:
                 error_message = json.loads(response.text)["message"]
                 print("broadcast response:", response.text)
@@ -337,7 +330,7 @@ class PWRPY:
             vmDataTxn = data.get('transactions')
             txn_array = []
             for txn_object in vmDataTxn:
-                txn = VmDataTxn.from_json(txn_object)
+                txn = VmDataTransaction.from_json(txn_object)
                 txn_array.append(txn)
             return txn_array
 
@@ -351,7 +344,7 @@ class PWRPY:
             vmDataTxn = data.get('transactions')
             txn_array = []
             for txn_object in vmDataTxn:
-                txn = VmDataTxn.from_json(txn_object)
+                txn = VmDataTransaction.from_json(txn_object)
                 txn_array.append(txn)
 
             return txn_array
@@ -372,7 +365,7 @@ class PWRPY:
         delegatees = []
         for validator_object in validator_objects:
             validator = Validator(
-                address= validator_object.get('address'),
+                address=validator_object.get('address'),
                 ip=validator_object.get('ip'),
                 bad_actor=validator_object.get('badActor'),
                 voting_power=validator_object.get('votingPower'),
@@ -389,7 +382,7 @@ class PWRPY:
         data = response.json()
         validator_object = data.get('validator')
         validator = Validator(
-            address= validator_object.get('address'),
+            address=validator_object.get('address'),
             ip=validator_object.get('ip'),
             bad_actor=validator_object.get('badActor'),
             voting_power=validator_object.get('votingPower'),
@@ -411,28 +404,71 @@ class PWRPY:
         data = response.json()
         return data.get('shareValue')
 
-    def is_transaction_valid_for_guardian_approval(self, txn):
+    @staticmethod
+    def get_vm_id_address(vm_id):
+        hex_address = "1" if vm_id >= 0 else "0"
+        if vm_id < 0:
+            vm_id = -vm_id
+        vm_id_string = str(vm_id)
+        hex_address += "0" * (39 - len(vm_id_string)) + vm_id_string
+        return "0x" + hex_address
+
+    @staticmethod
+    def is_vm_address(address):
+        if address is None or (len(address) != 40 and len(address) != 42):
+            return False
+        if address.startswith("0x"):
+            address = address[2:]
+        if not address.startswith("0") and not address.startswith("1"):
+            return False
+        negative = address.startswith("0")
+        if not negative:
+            address = address[1:]
         try:
-            if type(txn) in [bytes, bytearray]:
-                txn = txn.hex()
+            vm_id = int(address)
+            if negative:
+                vm_id = -vm_id
+            if vm_id > 2 ** 63 - 1 or vm_id < -(2 ** 63):
+                return False
+        except ValueError:
+            return False
+        return True
 
-            timeout = 3
-            url = f"{self.__rpc_node_url}/isTransactionValidForGuardianApproval/"
-            data = {
-                "txn": txn
-            }
-            headers = {
-                "Accept": "application/json",
-                "Content-Type": "application/json"
-            }
+    def is_transaction_valid_for_guardian_approval(self, transaction):
+        if isinstance(transaction, (bytes, bytearray)):
+            transaction = transaction.hex()
+        url = f"{self.__rpc_node_url}/isTransactionValidForGuardianApproval/"
+        data = {"transaction": transaction}
+        response = requests.post(url, json=data)
+        response_data = response.json()
+        if response_data["valid"]:
+            return TransactionForGuardianApproval(
+                valid=True,
+                guardian_address=response_data.get("guardian", "0x"),
+                transaction=Transaction.from_json(response_data["transaction"], 0, 0, 0),
+                error_message=None
+            )
+        else:
+            return TransactionForGuardianApproval(
+                valid=False,
+                guardian_address=response_data.get("guardian", "0x"),
+                transaction=None,
+                error_message=response_data["error"]
+            )
 
-            response = requests.post(url, json=data, headers=headers, timeout=timeout)
-            data = response.json()
-            is_valid = data.get('valid')
-            if is_valid:
-                return TxnForGuardianApproval(is_valid, None, Transaction.from_json(data))
-            else:
-                raise RuntimeError("Failed with HTTP error code: " + str(response.status_code))
+    def get_shares_of_delegator(self, delegator_address, validator_address):
+        url = f"{self.__rpc_node_url}/validator/delegator/sharesOfAddress/?userAddress={delegator_address}&validatorAddress={validator_address}"
+        response = requests.get(url)
+        response_data = response.json()
+        return response_data["shares"]
 
+    def get_conduits_of_vm(self, vm_id):
+        try:
+            url = f"{self.__rpc_node_url}/conduitsOfVm/?vmId={vm_id}"
+            response = requests.get(url)
+            response_data = response.json()
+            conduits = response_data["conduits"]
+            return [Validator.from_json(conduit) for conduit in conduits]
         except Exception as e:
-            print(f"An error occurred: {e}")
+            print(e)
+            return []
