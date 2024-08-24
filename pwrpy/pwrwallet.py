@@ -1,0 +1,273 @@
+import eth_account
+from pwrpy.signer import Signature
+from pwrpy.TransactionBuilder import TransactionBuilder
+from pwrpy.pwrapisdk import PWRPY
+from pwrpy.models.Response import ApiResponse
+
+
+class PWRWallet:
+    def __init__(self, private_key=None, pwrpy: PWRPY = None):
+        if private_key is None:
+            self.private_key = int.from_bytes(eth_account.Account.create().key, 'big')
+        elif isinstance(private_key, str):
+            if private_key.startswith("0x"):
+                private_key = private_key[2:]
+            self.private_key = int(private_key, 16)
+        elif isinstance(private_key, bytes):
+            self.private_key = int.from_bytes(private_key, 'big')
+        elif isinstance(private_key, int):
+            self.private_key = private_key
+        else:
+            raise ValueError("Invalid private key format")
+
+        self.pwrpy = pwrpy
+
+    def get_address(self):
+        return eth_account.Account.from_key(self.private_key).address
+
+    def get_balance(self):
+        return self.pwrpy.get_balance_of_address(self.get_address())
+
+    def get_nonce(self):
+        return self.pwrpy.get_nonce_of_address(self.get_address())
+
+    def get_private_key(self):
+        return self.private_key
+
+    def get_signed_transaction(self, transaction):
+        if transaction is None:
+            return None
+        signature = Signature.sign_message(private_key=self.get_private_key(),
+                                           message=transaction)
+        # Create a byte buffer for the final transaction
+        final_txn = bytearray(len(transaction) + 65)
+
+        # Copy the original transaction and signature to the final transaction buffer
+        final_txn[:len(transaction)] = transaction
+        final_txn[len(transaction):] = signature
+
+        return bytes(final_txn)
+
+    def get_signed_transfer_pwr_transaction(self, to, amount, nonce):
+        return self.get_signed_transaction(
+            TransactionBuilder.get_transfer_pwr_transaction(to, amount, nonce, self.pwrpy.get_chainId()))
+
+    def transfer_pwr(self, to, amount, nonce):
+        return self.pwrpy.broadcast_transaction(self.get_signed_transfer_pwr_transaction(to, amount, nonce))
+
+    def get_signed_join_transaction(self, ip, nonce):
+        return self.get_signed_transaction(
+            TransactionBuilder.get_join_transaction(ip, nonce, self.pwrpy.get_chainId()))
+
+    def join(self, ip, nonce):
+        return self.pwrpy.broadcast_transaction(self.get_signed_join_transaction(ip, nonce))
+
+    def get_signed_claim_active_node_spot_transaction(self, nonce):
+        return self.get_signed_transaction(
+            TransactionBuilder.get_claim_active_node_spot_transaction(nonce, self.pwrpy.get_chainId()))
+
+    def claim_active_node_spot(self, nonce):
+        return self.pwrpy.broadcast_transaction(self.get_signed_claim_active_node_spot_transaction(nonce))
+
+    def get_signed_delegate_transaction(self, validator, amount, nonce):
+        return self.get_signed_transaction(
+            TransactionBuilder.get_delegate_transaction(validator, amount, nonce, self.pwrpy.get_chainId()))
+
+    def delegate(self, validator, amount, nonce):
+        return self.pwrpy.broadcast_transaction(self.get_signed_delegate_transaction(validator, amount, nonce))
+
+    def get_signed_withdraw_transaction(self, validator, shares_amount, nonce):
+        return self.get_signed_transaction(
+            TransactionBuilder.get_withdraw_transaction(validator, shares_amount, nonce, self.pwrpy.get_chainId()))
+
+    def withdraw(self, validator, shares_amount, nonce):
+        return self.pwrpy.broadcast_transaction(
+            self.get_signed_withdraw_transaction(validator, shares_amount, nonce))
+
+    def get_signed_vm_data_transaction(self, vm_id, data, nonce):
+        return self.get_signed_transaction(
+            TransactionBuilder.get_vm_data_transaction(vm_id, data, nonce, self.pwrpy.get_chainId()))
+
+    def send_vm_data_transaction(self, vm_id, data, nonce):
+        return self.pwrpy.broadcast_transaction(self.get_signed_vm_data_transaction(vm_id, data, nonce))
+
+    def get_signed_claim_vm_id_transaction(self, vm_id, nonce):
+        return self.get_signed_transaction(
+            TransactionBuilder.get_claim_vm_id_transaction(vm_id, nonce, self.pwrpy.get_chainId()))
+
+    def claim_vm_id(self, vm_id, nonce):
+        return self.pwrpy.broadcast_transaction(self.get_signed_claim_vm_id_transaction(vm_id, nonce))
+
+    def get_signed_set_guardian_transaction(self, guardian, expiry_date, nonce):
+        return self.get_signed_transaction(
+            TransactionBuilder.get_set_guardian_transaction(guardian, expiry_date, nonce, self.pwrpy.get_chainId()))
+
+    def set_guardian(self, guardian, expiry_date, nonce):
+        return self.pwrpy.broadcast_transaction(
+            self.get_signed_set_guardian_transaction(guardian, expiry_date, nonce))
+
+    def get_signed_remove_guardian_transaction(self, nonce):
+        return self.get_signed_transaction(
+            TransactionBuilder.get_remove_guardian_transaction(nonce, self.pwrpy.get_chainId()))
+
+    def remove_guardian(self, nonce):
+        return self.pwrpy.broadcast_transaction(self.get_signed_remove_guardian_transaction(nonce))
+
+    def get_signed_guardian_approval_transaction(self, transactions, nonce):
+        return self.get_signed_transaction(
+            TransactionBuilder.get_guardian_approval_transaction(transactions, nonce, self.pwrpy.get_chainId()))
+
+    def send_guardian_approval_transaction(self, transactions, nonce):
+        return self.pwrpy.broadcast_transaction(self.get_signed_guardian_approval_transaction(transactions, nonce))
+
+    def get_signed_payable_vm_data_transaction(self, vm_id, value, data, nonce):
+        return self.get_signed_transaction(
+            TransactionBuilder.get_payable_vm_data_transaction(vm_id, value, data, nonce, self.pwrpy.get_chainId()))
+
+    def send_payable_vm_data_transaction(self, vm_id, value, data, nonce):
+        try:
+            return self.pwrpy.broadcast_transaction(
+                self.get_signed_payable_vm_data_transaction(vm_id, value, data, nonce))
+        except Exception as e:
+            return ApiResponse(success=False, data=None, message=str(e))
+
+    def get_signed_validator_remove_transaction(self, validator, nonce):
+        return self.get_signed_transaction(
+            TransactionBuilder.get_validator_remove_transaction(validator, nonce, self.pwrpy.get_chainId()))
+
+    def send_validator_remove_transaction(self, validator, nonce):
+        return self.pwrpy.broadcast_transaction(self.get_signed_validator_remove_transaction(validator, nonce))
+
+    def get_signed_conduit_approval_transaction(self, vm_id, transactions, nonce):
+        return self.get_signed_transaction(
+            TransactionBuilder.get_conduit_approval_transaction(vm_id, transactions, nonce,
+                                                                self.pwrpy.get_chainId()))
+
+    def conduit_approve(self, vm_id, transactions, nonce):
+        return self.pwrpy.broadcast_transaction(
+            self.get_signed_conduit_approval_transaction(vm_id, transactions, nonce))
+
+    def get_signed_set_conduit_transaction(self, vm_id, conduits, nonce):
+        return self.get_signed_transaction(
+            TransactionBuilder.get_set_conduits_transaction(vm_id, conduits, nonce, self.pwrpy.get_chainId()))
+
+    def set_conduits(self, vm_id, conduits, nonce):
+        return self.pwrpy.broadcast_transaction(self.get_signed_set_conduit_transaction(vm_id, conduits, nonce))
+
+    def get_signed_move_stake_transaction(self, shares_amount, from_validator, to_validator, nonce):
+        return self.get_signed_transaction(
+            TransactionBuilder.get_move_stake_transaction(shares_amount, from_validator, to_validator, nonce,
+                                                          self.pwrpy.get_chainId()))
+
+    def move_stake(self, shares_amount, from_validator, to_validator, nonce):
+        return self.pwrpy.broadcast_transaction(
+            self.get_signed_move_stake_transaction(shares_amount, from_validator, to_validator, nonce))
+
+    ### Governance Update
+    def get_signed_change_early_withdraw_penalty_proposal_txn(self, withdrawal_penalty_time, withdrawal_penalty, title,
+                                                              description, nonce):
+        return self.get_signed_transaction(
+            TransactionBuilder.get_change_early_withdraw_penalty_proposal_txn(withdrawal_penalty_time,
+                                                                              withdrawal_penalty, title, description,
+                                                                              nonce, self.pwrpy.get_chainId()))
+
+    def create_proposal_change_early_withdrawal_penalty(self, withdrawal_penalty_time, withdrawal_penalty, title,
+                                                        description, nonce):
+        return self.pwrpy.broadcast_transaction(
+            self.get_signed_change_early_withdraw_penalty_proposal_txn(withdrawal_penalty_time, withdrawal_penalty,
+                                                                       title, description, nonce))
+
+    def get_signed_change_fee_per_byte_proposal_txn(self, fee_per_byte, title, description, nonce):
+        return self.get_signed_transaction(
+            TransactionBuilder.get_change_fee_per_byte_proposal_txn(fee_per_byte, title, description, nonce,
+                                                                    self.pwrpy.get_chainId()))
+
+    def create_proposal_change_fee_per_byte(self, fee_per_byte, title, description, nonce):
+        return self.pwrpy.broadcast_transaction(
+            self.get_signed_change_fee_per_byte_proposal_txn(fee_per_byte, title, description, nonce))
+
+    def get_signed_change_max_block_size_proposal_txn(self, max_block_size, title, description, nonce):
+        return self.get_signed_transaction(
+            TransactionBuilder.get_change_max_block_size_proposal_txn(max_block_size, title, description, nonce,
+                                                                      self.pwrpy.get_chainId()))
+
+    def create_proposal_change_max_block_size(self, max_block_size, title, description, nonce):
+        return self.pwrpy.broadcast_transaction(
+            self.get_signed_change_max_block_size_proposal_txn(max_block_size, title, description, nonce))
+
+    def get_signed_change_max_txn_size_proposal_txn(self, max_txn_size, title, description, nonce):
+        return self.get_signed_transaction(
+            TransactionBuilder.get_change_max_txn_size_proposal_txn(max_txn_size, title, description, nonce,
+                                                                    self.pwrpy.get_chainId()))
+
+    def create_proposal_change_max_txn_size(self, max_txn_size, title, description, nonce):
+        return self.pwrpy.broadcast_transaction(
+            self.get_signed_change_max_txn_size_proposal_txn(max_txn_size, title, description, nonce))
+
+    def get_signed_change_overall_burn_percentage_proposal_txn(self, burn_percentage, title, description, nonce):
+        return self.get_signed_transaction(
+            TransactionBuilder.get_change_overall_burn_percentage_proposal_txn(burn_percentage, title, description,
+                                                                               nonce, self.pwrpy.get_chainId()))
+
+    def create_proposal_change_overall_burn_percentage(self, burn_percentage, title, description, nonce):
+        return self.pwrpy.broadcast_transaction(
+            self.get_signed_change_overall_burn_percentage_proposal_txn(burn_percentage, title, description, nonce))
+
+    def get_signed_change_reward_per_year_proposal_txn(self, reward_per_year, title, description, nonce):
+        return self.get_signed_transaction(
+            TransactionBuilder.get_change_reward_per_year_proposal_txn(reward_per_year, title, description, nonce,
+                                                                       self.pwrpy.get_chainId()))
+
+    def create_proposal_change_reward_per_year(self, reward_per_year, title, description, nonce):
+        return self.pwrpy.broadcast_transaction(
+            self.get_signed_change_reward_per_year_proposal_txn(reward_per_year, title, description, nonce))
+
+    def get_signed_change_validator_count_limit_proposal_txn(self, validator_count_limit, title, description, nonce):
+        return self.get_signed_transaction(
+            TransactionBuilder.get_change_validator_count_limit_proposal_txn(validator_count_limit, title, description,
+                                                                             nonce, self.pwrpy.get_chainId()))
+
+    def create_proposal_change_validator_count_limit(self, validator_count_limit, title, description, nonce):
+        return self.pwrpy.broadcast_transaction(
+            self.get_signed_change_validator_count_limit_proposal_txn(validator_count_limit, title, description, nonce))
+
+    def get_signed_change_validator_joining_fee_proposal_txn(self, joining_fee, title, description, nonce):
+        return self.get_signed_transaction(
+            TransactionBuilder.get_change_validator_joining_fee_proposal_txn(joining_fee, title, description, nonce,
+                                                                             self.pwrpy.get_chainId()))
+
+    def create_proposal_change_validator_joining_fee(self, joining_fee, title, description, nonce):
+        return self.pwrpy.broadcast_transaction(
+            self.get_signed_change_validator_joining_fee_proposal_txn(joining_fee, title, description, nonce))
+
+    def get_signed_change_vm_id_claiming_fee_proposal_txn(self, claiming_fee, title, description, nonce):
+        return self.get_signed_transaction(
+            TransactionBuilder.get_change_vm_id_claiming_fee_proposal_txn(claiming_fee, title, description, nonce,
+                                                                          self.pwrpy.get_chainId()))
+
+    def create_proposal_change_vm_id_claiming_fee(self, claiming_fee, title, description, nonce):
+        return self.pwrpy.broadcast_transaction(
+            self.get_signed_change_vm_id_claiming_fee_proposal_txn(claiming_fee, title, description, nonce))
+
+    def get_signed_change_vm_owner_txn_fee_share_proposal_txn(self, fee_share, title, description, nonce):
+        return self.get_signed_transaction(
+            TransactionBuilder.get_change_vm_owner_txn_fee_share_proposal_txn(fee_share, title, description, nonce,
+                                                                              self.pwrpy.get_chainId()))
+
+    def create_proposal_change_vm_owner_txn_fee_share(self, fee_share, title, description, nonce):
+        return self.pwrpy.broadcast_transaction(
+            self.get_signed_change_vm_owner_txn_fee_share_proposal_txn(fee_share, title, description, nonce))
+
+    def get_signed_other_proposal_txn(self, title, description, nonce):
+        return self.get_signed_transaction(
+            TransactionBuilder.get_other_proposal_txn(title, description, nonce, self.pwrpy.get_chainId()))
+
+    def create_proposal_other_proposal(self, title, description, nonce):
+        return self.pwrpy.broadcast_transaction(self.get_signed_other_proposal_txn(title, description, nonce))
+
+    def get_signed_vote_on_proposal_txn(self, proposal_hash, vote, nonce):
+        return self.get_signed_transaction(
+            TransactionBuilder.get_vote_on_proposal_txn(proposal_hash, vote, nonce, self.pwrpy.get_chainId()))
+
+    def vote_on_proposal(self, proposal_hash, vote, nonce):
+        return self.pwrpy.broadcast_transaction(self.get_signed_vote_on_proposal_txn(proposal_hash, vote, nonce))

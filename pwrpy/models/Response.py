@@ -1,4 +1,4 @@
-from src.pwrpy.models.Transaction import Transaction
+from pwrpy.models.Transaction import Transaction
 
 
 class TransactionForGuardianApproval:
@@ -30,3 +30,15 @@ class ApiResponse:
         self.success = success
         self.message = message
         self.data = data
+
+
+class EarlyWithdrawPenaltyResponse:
+    def __init__(self, early_withdraw_available, penalty):
+        self.early_withdraw_available = early_withdraw_available
+        self.penalty = penalty
+
+    def is_early_withdraw_available(self):
+        return self.early_withdraw_available
+
+    def get_penalty(self):
+        return self.penalty

@@ -2,8 +2,7 @@ from eth_utils import to_hex
 from eth_account import Account
 from eth_account.messages import encode_defunct
 
-from src.pwrpy.pwrapisdk import PWRPY
-from src.pwrpy.models.Transaction import *
+from pwrpy.pwrapisdk import PWRPY
 
 
 class TransactionDecoder:
@@ -371,3 +370,194 @@ class TransactionDecoder:
         message = encode_defunct(txn)
         signer_address = Account.recover_message(message, signature=signature)
         return bytes.fromhex(signer_address[2:])
+
+    @staticmethod
+    def decode_change_early_withdraw_penalty_proposal_txn(txn: bytes, sender: bytes, nonce: int):
+        title_length = int.from_bytes(txn[6:10], 'big')
+        title = txn[10:10 + title_length].decode('utf-8')
+        offset = 10 + title_length
+        withdrawal_penalty_time = int.from_bytes(txn[offset:offset + 8], 'big')
+        withdrawal_penalty = int.from_bytes(txn[offset + 8:offset + 12], 'big')
+        description = txn[offset + 12:-65].decode('utf-8')  # Assuming signature is 65 bytes long at the end
+        return {
+            'sender': to_hex(sender),
+            'nonce': nonce,
+            'title': title,
+            'description': description,
+            'withdrawal_penalty_time': withdrawal_penalty_time,
+            'withdrawal_penalty': withdrawal_penalty,
+            'raw_transaction': txn,
+            'chain_id': txn[1]
+        }
+
+    @staticmethod
+    def decode_change_fee_per_byte_proposal_txn(txn: bytes, sender: bytes, nonce: int):
+        title_length = int.from_bytes(txn[6:10], 'big')
+        title = txn[10:10 + title_length].decode('utf-8')
+        offset = 10 + title_length
+        fee_per_byte = int.from_bytes(txn[offset:offset + 8], 'big')
+        description = txn[offset + 8:-65].decode('utf-8')  # Assuming signature is 65 bytes long at the end
+        return {
+            'sender': to_hex(sender),
+            'nonce': nonce,
+            'title': title,
+            'description': description,
+            'fee_per_byte': fee_per_byte,
+            'raw_transaction': txn,
+            'chain_id': txn[1]
+        }
+
+    @staticmethod
+    def decode_change_max_block_size_proposal_txn(txn: bytes, sender: bytes, nonce: int):
+        title_length = int.from_bytes(txn[6:10], 'big')
+        title = txn[10:10 + title_length].decode('utf-8')
+        max_block_size = int.from_bytes(txn[10 + title_length:10 + title_length + 4], 'big')
+        description = txn[10 + title_length + 4:-65].decode('utf-8')  # Assuming signature is 65 bytes long at the end
+        return {
+            'sender': to_hex(sender),
+            'nonce': nonce,
+            'title': title,
+            'description': description,
+            'max_block_size': max_block_size,
+            'raw_transaction': txn,
+            'chain_id': txn[1]
+        }
+
+    @staticmethod
+    def decode_change_max_txn_size_proposal_txn(txn: bytes, sender: bytes, nonce: int):
+        title_length = int.from_bytes(txn[6:10], 'big')
+        title = txn[10:10 + title_length].decode('utf-8')
+        max_txn_size = int.from_bytes(txn[10 + title_length:10 + title_length + 4], 'big')
+        description = txn[10 + title_length + 4:-65].decode('utf-8')  # Assuming signature is 65 bytes long at the end
+        return {
+            'sender': to_hex(sender),
+            'nonce': nonce,
+            'title': title,
+            'description': description,
+            'max_txn_size': max_txn_size,
+            'raw_transaction': txn,
+            'chain_id': txn[1]
+        }
+
+    @staticmethod
+    def decode_change_overall_burn_percentage_proposal_txn(txn: bytes, sender: bytes, nonce: int):
+        title_length = int.from_bytes(txn[6:10], 'big')
+        title = txn[10:10 + title_length].decode('utf-8')
+        burn_percentage = int.from_bytes(txn[10 + title_length:10 + title_length + 4], 'big')
+        description = txn[10 + title_length + 4:-65].decode('utf-8')  # Assuming signature is 65 bytes long at the end
+        return {
+            'sender': to_hex(sender),
+            'nonce': nonce,
+            'title': title,
+            'description': description,
+            'burn_percentage': burn_percentage,
+            'raw_transaction': txn,
+            'chain_id': txn[1]
+        }
+
+    @staticmethod
+    def decode_change_reward_per_year_proposal_txn(txn: bytes, sender: bytes, nonce: int):
+        title_length = int.from_bytes(txn[6:10], 'big')
+        title = txn[10:10 + title_length].decode('utf-8')
+        reward_per_year = int.from_bytes(txn[10 + title_length:10 + title_length + 8], 'big')
+        description = txn[10 + title_length + 8:-65].decode('utf-8')  # Assuming signature is 65 bytes long at the end
+        return {
+            'sender': to_hex(sender),
+            'nonce': nonce,
+            'title': title,
+            'description': description,
+            'reward_per_year': reward_per_year,
+            'raw_transaction': txn,
+            'chain_id': txn[1]
+        }
+
+    @staticmethod
+    def decode_change_validator_count_limit_proposal_txn(txn: bytes, sender: bytes, nonce: int):
+        title_length = int.from_bytes(txn[6:10], 'big')
+        title = txn[10:10 + title_length].decode('utf-8')
+        validator_count_limit = int.from_bytes(txn[10 + title_length:10 + title_length + 4], 'big')
+        description = txn[10 + title_length + 4:-65].decode('utf-8')  # Assuming signature is 65 bytes long at the end
+        return {
+            'sender': to_hex(sender),
+            'nonce': nonce,
+            'title': title,
+            'description': description,
+            'validator_count_limit': validator_count_limit,
+            'raw_transaction': txn,
+            'chain_id': txn[1]
+        }
+
+    @staticmethod
+    def decode_change_validator_joining_fee_proposal_txn(txn: bytes, sender: bytes, nonce: int):
+        title_length = int.from_bytes(txn[6:10], 'big')
+        title = txn[10:10 + title_length].decode('utf-8')
+        joining_fee = int.from_bytes(txn[10 + title_length:10 + title_length + 8], 'big')
+        description = txn[10 + title_length + 8:-65].decode('utf-8')  # Assuming signature is 65 bytes long at the end
+        return {
+            'sender': to_hex(sender),
+            'nonce': nonce,
+            'title': title,
+            'description': description,
+            'joining_fee': joining_fee,
+            'raw_transaction': txn,
+            'chain_id': txn[1]
+        }
+
+    @staticmethod
+    def decode_change_vm_id_claiming_fee_proposal_txn(txn: bytes, sender: bytes, nonce: int):
+        title_length = int.from_bytes(txn[6:10], 'big')
+        title = txn[10:10 + title_length].decode('utf-8')
+        claiming_fee = int.from_bytes(txn[10 + title_length:10 + title_length + 8], 'big')
+        description = txn[10 + title_length + 8:-65].decode('utf-8')  # Assuming signature is 65 bytes long at the end
+        return {
+            'sender': to_hex(sender),
+            'nonce': nonce,
+            'title': title,
+            'description': description,
+            'claiming_fee': claiming_fee,
+            'raw_transaction': txn,
+            'chain_id': txn[1]
+        }
+
+    @staticmethod
+    def decode_change_vm_owner_txn_fee_share_proposal_txn(txn: bytes, sender: bytes, nonce: int):
+        title_length = int.from_bytes(txn[6:10], 'big')
+        title = txn[10:10 + title_length].decode('utf-8')
+        fee_share = int.from_bytes(txn[10 + title_length:10 + title_length + 4], 'big')
+        description = txn[10 + title_length + 4:-65].decode('utf-8')  # Assuming signature is 65 bytes long at the end
+        return {
+            'sender': to_hex(sender),
+            'nonce': nonce,
+            'title': title,
+            'description': description,
+            'fee_share': fee_share,
+            'raw_transaction': txn,
+            'chain_id': txn[1]
+        }
+
+    @staticmethod
+    def decode_other_proposal_txn(txn: bytes, sender: bytes, nonce: int):
+        title_length = int.from_bytes(txn[6:10], 'big')
+        title = txn[10:10 + title_length].decode('utf-8')
+        description = txn[10 + title_length:-65].decode('utf-8')  # Assuming signature is 65 bytes long at the end
+        return {
+            'sender': to_hex(sender),
+            'nonce': nonce,
+            'title': title,
+            'description': description,
+            'raw_transaction': txn,
+            'chain_id': txn[1]
+        }
+
+    @staticmethod
+    def decode_vote_on_proposal_txn(txn: bytes, sender: bytes, nonce: int):
+        proposal_hash = to_hex(txn[6:38])
+        vote = txn[38]
+        return {
+            'sender': to_hex(sender),
+            'nonce': nonce,
+            'proposal_hash': proposal_hash,
+            'vote': vote,
+            'raw_transaction': txn,
+            'chain_id': txn[1]
+        }

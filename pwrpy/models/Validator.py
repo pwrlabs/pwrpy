@@ -1,5 +1,5 @@
 import requests
-from src.pwrpy.models.Delegator import Delegator
+from pwrpy.models.Delegator import Delegator
 
 
 class Validator:

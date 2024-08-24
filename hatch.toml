@@ -1,0 +1,6 @@
+[[tool.hatch.project]]
+name = "pwrpy"
+version = "6.0.2"
+
+[[tool.hatch.backend]]
+backend = "hatchling.build"
