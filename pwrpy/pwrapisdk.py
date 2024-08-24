@@ -4,20 +4,20 @@ import requests
 from requests.exceptions import Timeout, RequestException
 from binascii import hexlify
 
-from src.pwrpy.models.Transaction import Transaction
-from src.pwrpy.models.Transaction import VmDataTransaction
-from src.pwrpy.models.Block import Block
-from src.pwrpy.models.Validator import Validator
-from src.pwrpy.models.Response import ApiResponse, TransactionForGuardianApproval
+from pwrpy.models.Transaction import Transaction, GuardianApprovalTransaction
+from pwrpy.models.Transaction import VmDataTransaction
+from pwrpy.models.Block import Block
+from pwrpy.models.Validator import Validator
+from pwrpy.models.Response import ApiResponse, TransactionForGuardianApproval, EarlyWithdrawPenaltyResponse
 
 
-def get_response(url: str, timeout: int = 5):
+def get_response(url: str, timeout):
     """
     Fetch a Response object from the given URL.
 
     Args:
         url (str): The URL to fetch the JSON object from.
-        timeout (int): Timeout for the HTTP request in seconds. Default is 10 seconds.
+        timeout (int): Timeout for the HTTP request in seconds. Default is 5 seconds.
 
     Returns:
         Response: The response object containing the HTTP response from the server.
@@ -32,17 +32,18 @@ def get_response(url: str, timeout: int = 5):
         return response
     except Timeout:
         print("Request timed out.")
-        # Handle timeout error as needed
 
     except RequestException as e:
         print("Request error:", e)
-        # Handle other request exceptions (e.g., connection errors)
 
     except Exception as e:
         print("An unexpected error occurred:", e)
 
 
 class PWRPY:
+    so_timeout = 20
+    connection_timeout = 20
+
     def __init__(self):
         self.__rpc_node_url = "https://pwrrpc.pwrlabs.io/"
         self.__chainId = b'-1'  # The chain ID is set to -1 until fetched from the rpc_node_url
@@ -79,7 +80,6 @@ class PWRPY:
 
     def broadcast_transaction(self, txn):
         try:
-            timeout = 3
             url = self.__rpc_node_url + "/broadcast/"
             data = {
                 "txn": txn.hex()
@@ -90,7 +90,7 @@ class PWRPY:
                 "Content-Type": "application/json"
             }
 
-            response = requests.post(url, json=data, headers=headers, timeout=timeout)
+            response = requests.post(url, json=data, headers=headers, timeout=(self.connection_timeout, self.so_timeout))
 
             if response.status_code == 200:
                 txnHash = "0x" + hashlib.sha3_256(txn).hexdigest()
@@ -98,7 +98,7 @@ class PWRPY:
             elif response.status_code == 400:
                 error_message = json.loads(response.text)["message"]
                 print("broadcast response:", response.text)
-                return ApiResponse(False, error_message, None, )
+                return ApiResponse(False, error_message, None)
             else:
                 raise RuntimeError("Failed with HTTP error code: " + str(response.status_code))
 
@@ -130,7 +130,7 @@ class PWRPY:
         url = f"{self.__rpc_node_url}/guardianOf/?userAddress={address}"
         response = get_response(url)
         data = response.json()
-        if data.get('isGuarded') == 'true':
+        if data.get('isGuarded'):
             return data.get('guardian')
         else:
             return None
@@ -145,7 +145,7 @@ class PWRPY:
         url = f"{self.__rpc_node_url}/block/?blockNumber={block_number}"
         response = get_response(url)
         data = response.json()
-        block = Block.from_json(data)
+        block = Block.from_json(data.get('block'))
         return block
 
     def get_total_validators_count(self):
@@ -296,7 +296,10 @@ class PWRPY:
 
             if response.status_code == 200:
                 data = response.json()
-                return data["owner"]
+                if data.get("claimed", False):
+                    return data["owner"]
+                else:
+                    return None
             else:
                 return response.get("message")
 
@@ -361,8 +364,12 @@ class PWRPY:
         url = f"{self.__rpc_node_url}/delegateesOfUser/?userAddress={address}"
         response = get_response(url)
         data = response.json()
-        validator_objects = data.get('delegatees')
+        print(data)
+        validator_objects = data.get('validators')
         delegatees = []
+        if validator_objects is None:
+            return delegatees
+
         for validator_object in validator_objects:
             validator = Validator(
                 address=validator_object.get('address'),
@@ -472,3 +479,279 @@ class PWRPY:
         except Exception as e:
             print(e)
             return []
+
+    def get_fee(self, txn):
+        fee_per_byte = self.get_fee_per_byte()
+        from pwrpy.TransactionDecoder import TransactionDecoder
+        transaction = TransactionDecoder.decode(txn)
+
+        if isinstance(transaction, GuardianApprovalTransaction):
+            ecdsa_verification_fee = self.get_ecdsa_verification_fee()
+            fee = (len(txn) * fee_per_byte) + ecdsa_verification_fee
+            fee += len(transaction.get_transactions()) * ecdsa_verification_fee
+            return fee
+        else:
+            ecdsa_verification_fee = self.get_ecdsa_verification_fee()
+            return (len(txn) * fee_per_byte) + ecdsa_verification_fee
+
+    def get_ecdsa_verification_fee(self):
+        try:
+            url = self.get_rpc_node_url() + "/ecdsaVerificationFee/"
+            response = requests.get(url, timeout=(self.connection_timeout, self.so_timeout))
+
+            if response.status_code == 200:
+                return response.json()["ecdsaVerificationFee"]
+            else:
+                raise RuntimeError(
+                    "Failed to get ECDSA verification fee with HTTP error code: " + str(response.status_code))
+        except Exception as e:
+            raise IOError(str(e))
+
+    def get_max_block_size(self):
+        try:
+            url = self.get_rpc_node_url() + "/maxBlockSize/"
+            response = requests.get(url, timeout=(self.connection_timeout, self.so_timeout))
+
+            if response.status_code == 200:
+                return response.json()["maxBlockSize"]
+            else:
+                raise RuntimeError("Failed to get max block size with HTTP error code: " + str(response.status_code))
+        except Exception as e:
+            raise IOError(str(e))
+
+    def get_max_transaction_size(self):
+        try:
+            url = self.get_rpc_node_url() + "/maxTransactionSize/"
+            response = requests.get(url, timeout=(self.connection_timeout, self.so_timeout))
+
+            if response.status_code == 200:
+                return response.json()["maxTransactionSize"]
+            else:
+                raise RuntimeError(
+                    "Failed to get max transaction size with HTTP error code: " + str(response.status_code))
+        except Exception as e:
+            raise IOError(str(e))
+
+    def get_validator_count_limit(self):
+        try:
+            url = self.get_rpc_node_url() + "/validatorCountLimit/"
+            response = requests.get(url, timeout=(self.connection_timeout, self.so_timeout))
+
+            if response.status_code == 200:
+                return response.json()["validatorCountLimit"]
+            else:
+                raise RuntimeError(
+                    "Failed to get validator count limit with HTTP error code: " + str(response.status_code))
+        except Exception as e:
+            raise IOError(str(e))
+
+    def get_validator_slashing_fee(self):
+        try:
+            url = self.get_rpc_node_url() + "/validatorSlashingFee/"
+            response = requests.get(url, timeout=(self.connection_timeout, self.so_timeout))
+
+            if response.status_code == 200:
+                return response.json()["validatorSlashingFee"]
+            else:
+                raise RuntimeError(
+                    "Failed to get validator slashing fee with HTTP error code: " + str(response.status_code))
+        except Exception as e:
+            raise IOError(str(e))
+
+    def get_vm_owner_transaction_fee_share(self):
+        try:
+            url = self.get_rpc_node_url() + "/vmOwnerTransactionFeeShare/"
+            response = requests.get(url, timeout=(self.connection_timeout, self.so_timeout))
+
+            if response.status_code == 200:
+                return response.json()["vmOwnerTransactionFeeShare"]
+            else:
+                raise RuntimeError("Failed to get VM owner transaction fee share with HTTP error code: " + str(
+                    response.status_code))
+        except Exception as e:
+            raise IOError(str(e))
+
+    def get_burn_percentage(self):
+        try:
+            url = self.get_rpc_node_url() + "/burnPercentage/"
+            response = requests.get(url, timeout=(self.connection_timeout, self.so_timeout))
+
+            if response.status_code == 200:
+                return response.json()["burnPercentage"]
+            else:
+                raise RuntimeError(
+                    "Failed to get burn percentage with HTTP error code: " + str(response.status_code))
+        except Exception as e:
+            raise IOError(str(e))
+
+    def get_validator_operational_fee(self):
+        try:
+            url = self.get_rpc_node_url() + "/validatorOperationalFee/"
+            response = requests.get(url, timeout=(self.connection_timeout, self.so_timeout))
+
+            if response.status_code == 200:
+                return response.json()["validatorOperationalFee"]
+            else:
+                raise RuntimeError(
+                    "Failed to get validator operational fee with HTTP error code: " + str(response.status_code))
+        except Exception as e:
+            raise IOError(str(e))
+
+    def get_block_number(self):
+        try:
+            url = self.get_rpc_node_url() + "/blockNumber/"
+            response = requests.get(url, timeout=(self.connection_timeout, self.so_timeout))
+
+            if response.status_code == 200:
+                return response.json()["blockNumber"]
+            else:
+                raise RuntimeError("Failed to get block number with HTTP error code: " + str(response.status_code))
+        except Exception as e:
+            raise IOError(str(e))
+
+    def get_block_timestamp(self):
+        try:
+            url = self.get_rpc_node_url() + "/blockTimestamp/"
+            response = requests.get(url, timeout=(self.connection_timeout, self.so_timeout))
+
+            if response.status_code == 200:
+                return response.json()["blockTimestamp"]
+            else:
+                raise RuntimeError(
+                    "Failed to get block timestamp with HTTP error code: " + str(response.status_code))
+        except Exception as e:
+            raise IOError(str(e))
+
+    def get_total_voting_power(self):
+        try:
+            url = self.get_rpc_node_url() + "/totalVotingPower/"
+            response = requests.get(url, timeout=(self.connection_timeout, self.so_timeout))
+
+            if response.status_code == 200:
+                return response.json()["totalVotingPower"]
+            else:
+                raise RuntimeError(
+                    "Failed to get total voting power with HTTP error code: " + str(response.status_code))
+        except Exception as e:
+            raise IOError(str(e))
+
+    def get_pwr_rewards_per_year(self):
+        try:
+            url = self.get_rpc_node_url() + "/pwrRewardsPerYear/"
+            response = requests.get(url, timeout=(self.connection_timeout, self.so_timeout))
+
+            if response.status_code == 200:
+                return response.json()["pwrRewardsPerYear"]
+            else:
+                raise RuntimeError(
+                    "Failed to get PWR rewards per year with HTTP error code: " + str(response.status_code))
+        except Exception as e:
+            raise IOError(str(e))
+
+    def get_withdrawal_lock_time(self):
+        try:
+            url = self.get_rpc_node_url() + "/withdrawalLockTime/"
+            response = requests.get(url, timeout=(self.connection_timeout, self.so_timeout))
+
+            if response.status_code == 200:
+                return response.json()["withdrawalLockTime"]
+            else:
+                raise RuntimeError(
+                    "Failed to get withdrawal lock time with HTTP error code: " + str(response.status_code))
+        except Exception as e:
+            raise IOError(str(e))
+
+    def get_validator_joining_fee(self):
+        try:
+            url = self.get_rpc_node_url() + "/validatorJoiningFee/"
+            response = requests.get(url, timeout=(self.connection_timeout, self.so_timeout))
+
+            if response.status_code == 200:
+                return response.json()["validatorJoiningFee"]
+            else:
+                raise RuntimeError(
+                    "Failed to get validator joining fee with HTTP error code: " + str(response.status_code))
+        except Exception as e:
+            raise IOError(str(e))
+
+    def get_max_guardian_time(self):
+        try:
+            url = self.get_rpc_node_url() + "/maxGuardianTime/"
+            response = requests.get(url, timeout=(self.connection_timeout, self.so_timeout))
+
+            if response.status_code == 200:
+                return response.json()["maxGuardianTime"]
+            else:
+                raise RuntimeError(
+                    "Failed to get max guardian time with HTTP error code: " + str(response.status_code))
+        except Exception as e:
+            raise IOError(str(e))
+
+    def get_vm_id_claiming_fee(self):
+        try:
+            url = self.get_rpc_node_url() + "/vmIdClaimingFee/"
+            response = requests.get(url, timeout=(self.connection_timeout, self.so_timeout))
+
+            if response.status_code == 200:
+                return response.json()["vmIdClaimingFee"]
+            else:
+                raise RuntimeError(
+                    "Failed to get VM ID claiming fee with HTTP error code: " + str(response.status_code))
+        except Exception as e:
+            raise IOError(str(e))
+
+    def get_proposal_fee(self):
+        try:
+            url = self.get_rpc_node_url() + "/proposalFee/"
+            response = requests.get(url, timeout=(self.connection_timeout, self.so_timeout))
+
+            if response.status_code == 200:
+                return response.json()["proposalFee"]
+            else:
+                raise RuntimeError("Failed to get proposal fee with HTTP error code: " + str(response.status_code))
+        except Exception as e:
+            raise IOError(str(e))
+
+    def get_proposal_validity_time(self):
+        try:
+            url = self.get_rpc_node_url() + "/proposalValidityTime/"
+            response = requests.get(url, timeout=(self.connection_timeout, self.so_timeout))
+
+            if response.status_code == 200:
+                return response.json()["proposalValidityTime"]
+            else:
+                raise RuntimeError(
+                    "Failed to get proposal validity time with HTTP error code: " + str(response.status_code))
+        except Exception as e:
+            raise IOError(str(e))
+
+    def get_minimum_delegating_amount(self):
+        try:
+            url = self.get_rpc_node_url() + "/minimumDelegatingAmount/"
+            response = requests.get(url, timeout=(self.connection_timeout, self.so_timeout))
+
+            if response.status_code == 200:
+                return response.json()["minimumDelegatingAmount"]
+            else:
+                raise RuntimeError(
+                    "Failed to get minimum delegating amount with HTTP error code: " + str(response.status_code))
+        except Exception as e:
+            raise IOError(str(e))
+
+    def get_early_withdraw_penalty(self, withdraw_time):
+        url = f"{self.get_rpc_node_url()}/earlyWithdrawPenalty/?withdrawTime={withdraw_time}"
+        response = requests.get(url).json()
+
+        early_withdraw_available = response.get("earlyWithdrawAvailable", False)
+        penalty = response.get("penalty", 0) if early_withdraw_available else 0
+
+        return EarlyWithdrawPenaltyResponse(early_withdraw_available, penalty)
+
+    def get_all_early_withdraw_penalties(self):
+        url = f"{self.get_rpc_node_url()}/allEarlyWithdrawPenalties/"
+        response = requests.get(url).json()
+
+        penalties_obj = response.get("earlyWithdrawPenalties", {})
+        penalties = {int(k): v for k, v in penalties_obj.items()}
+
+        return penalties
