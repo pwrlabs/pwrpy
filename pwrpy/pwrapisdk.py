@@ -43,7 +43,7 @@ def get_response(url: str, timeout):
 class PWRPY:
     so_timeout = 20
     connection_timeout = 20
-    timout = (connection_timeout, so_timeout)
+    timeout = (connection_timeout, so_timeout)
 
     def __init__(self):
         self.__rpc_node_url = "https://pwrrpc.pwrlabs.io/"
@@ -53,7 +53,7 @@ class PWRPY:
     def get_chainId(self):
         if self.__chainId == b'-1':
             url = self.__rpc_node_url + "/chainId/"
-            response = get_response(url, self.timout)
+            response = get_response(url, self.timeout)
             chainID = response.json()["chainId"].to_bytes(1, byteorder='big')
             return chainID
 
@@ -66,7 +66,7 @@ class PWRPY:
     def get_fee_per_byte(self):
         if self.__fee_per_byte == 0:
             url = self.__rpc_node_url + "/feePerByte/"
-            response = get_response(url, self.timout)
+            response = get_response(url, self.timeout)
             data = response.json()
             fee = data.get('feePerByte')
             self.__fee_per_byte = fee
@@ -74,7 +74,7 @@ class PWRPY:
 
     def get_blockchain_version(self):
         url = f"{self.__rpc_node_url}/blockchainVersion/"
-        response = get_response(url, self.timout)
+        response = get_response(url, self.timeout)
         data = response.json()
         version = data.get('blockchainVersion')
         return version
@@ -109,7 +109,7 @@ class PWRPY:
     def get_nonce_of_address(self, address: str):
         try:
             url = self.get_rpc_node_url() + "/nonceOfUser/?userAddress=" + address
-            responseRaw = get_response(url, self.timout)
+            responseRaw = get_response(url, self.timeout)
             response = responseRaw.json()
 
             if responseRaw.status_code != 200:
@@ -122,14 +122,14 @@ class PWRPY:
 
     def get_balance_of_address(self, address: str):
         url = self.get_rpc_node_url() + "/balanceOf/?userAddress=" + address
-        response = get_response(url, self.timout)
+        response = get_response(url, self.timeout)
         data = response.json()
         balance = data.get('balance') / (10 ** 9)
         return balance
 
     def get_guardian_of_address(self, address: str):
         url = f"{self.__rpc_node_url}/guardianOf/?userAddress={address}"
-        response = get_response(url, self.timout)
+        response = get_response(url, self.timeout)
         data = response.json()
         if data.get('isGuarded'):
             return data.get('guardian')
@@ -138,13 +138,13 @@ class PWRPY:
 
     def get_blocks_count(self):
         url = self.get_rpc_node_url() + "/blocksCount/"
-        response = get_response(url, self.timout)
+        response = get_response(url, self.timeout)
         data = response.json()
         return data.get('blocksCount')
 
     def get_block_by_number(self, block_number):
         url = f"{self.__rpc_node_url}/block/?blockNumber={block_number}"
-        response = get_response(url, self.timout)
+        response = get_response(url, self.timeout)
         data = response.json()
         block = Block.from_json(data.get('block'))
         return block
@@ -152,7 +152,7 @@ class PWRPY:
     def get_total_validators_count(self):
         try:
             url = self.get_rpc_node_url() + "/totalValidatorsCount/"
-            responseRaw = get_response(url, self.timout)
+            responseRaw = get_response(url, self.timeout)
             response = responseRaw.json()
 
             if responseRaw.status_code != 200:
@@ -166,7 +166,7 @@ class PWRPY:
     def get_total_delegators_count(self):
         try:
             url = self.get_rpc_node_url() + "/totalDelegatorsCount/"
-            responseRaw = get_response(url, self.timout)
+            responseRaw = get_response(url, self.timeout)
             response = responseRaw.json()
 
             if responseRaw.status_code != 200:
@@ -180,7 +180,7 @@ class PWRPY:
     def get_standby_validators_count(self):
         try:
             url = self.get_rpc_node_url() + "/standbyValidatorsCount/"
-            responseRaw = get_response(url, self.timout)
+            responseRaw = get_response(url, self.timeout)
             response = responseRaw.json()
 
             if responseRaw.status_code != 200:
@@ -208,7 +208,7 @@ class PWRPY:
     def get_all_validators(self):
         try:
             url = self.get_rpc_node_url() + "/allValidators/"
-            response = get_response(url, self.timout)
+            response = get_response(url, self.timeout)
             if response.status_code == 200:
                 data = response.json()
                 validators = data['validators']
@@ -236,7 +236,7 @@ class PWRPY:
     def get_standby_validators(self):
         try:
             url = self.get_rpc_node_url() + "/standbyValidators/"
-            response = get_response(url, self.timout)
+            response = get_response(url, self.timeout)
             if response.status_code == 200:
                 data = response.json()
                 validators = data['validators']
@@ -263,7 +263,7 @@ class PWRPY:
     def get_active_validators(self):
         try:
             url = self.get_rpc_node_url() + "/activeValidators/"
-            response = get_response(url, self.timout)
+            response = get_response(url, self.timeout)
 
             if response.status_code == 200:
                 data = response.json()
@@ -293,7 +293,7 @@ class PWRPY:
     def get_owner_of_vm(self, vm_id):
         try:
             url = f"{self.__rpc_node_url}/ownerOfVmId/?vmId={vm_id}"
-            response = get_response(url, self.timout)
+            response = get_response(url, self.timeout)
 
             if response.status_code == 200:
                 data = response.json()
@@ -310,7 +310,7 @@ class PWRPY:
     def update_fee_per_byte(self):
         try:
             url = f"{self.get_rpc_node_url()}/feePerByte/"
-            response = get_response(url, self.timout)
+            response = get_response(url, self.timeout)
 
             if response.status_code == 200:
                 data = response.json()
@@ -328,7 +328,7 @@ class PWRPY:
 
     def get_vm_data_txns(self, starting_block: int, ending_block: int, vm_id: int):
         url = f"{self.__rpc_node_url}/getVmTransactions/?startingBlock={starting_block}&endingBlock={ending_block}&vmId={vm_id}"
-        response = get_response(url, self.timout)
+        response = get_response(url, self.timeout)
         if response.status_code == 200:
             data = response.json()
             vmDataTxn = data.get('transactions')
@@ -341,7 +341,7 @@ class PWRPY:
     def get_vm_data_txns_filter_by_byte_prefix(self, starting_block: int, ending_block: int, vm_id: int,
                                                prefix: bytearray):
         url = f"{self.get_rpc_node_url()}/getVmTransactionsSortByBytePrefix/?startingBlock={starting_block}&endingBlock={ending_block}&vmId={vm_id}&bytePrefix={hexlify(prefix).decode()}"
-        response = get_response(url, self.timout)
+        response = get_response(url, self.timeout)
 
         if response.status_code == 200:
             data = response.json()
@@ -357,13 +357,13 @@ class PWRPY:
 
     def get_active_voting_power(self):
         url = f"{self.__rpc_node_url}/activeVotingPower/"
-        response = get_response(url, self.timout)
+        response = get_response(url, self.timeout)
         data = response.json()
         return data.get('activeVotingPower')
 
     def get_delegatees(self, address: str):
         url = f"{self.__rpc_node_url}/delegateesOfUser/?userAddress={address}"
-        response = get_response(url, self.timout)
+        response = get_response(url, self.timeout)
         data = response.json()
         print(data)
         validator_objects = data.get('validators')
@@ -386,7 +386,7 @@ class PWRPY:
 
     def get_validator(self, address: str):
         url = f"{self.__rpc_node_url}/validator/?validatorAddress={address}"
-        response = get_response(url, self.timout)
+        response = get_response(url, self.timeout)
         data = response.json()
         validator_object = data.get('validator')
         validator = Validator(
@@ -402,13 +402,13 @@ class PWRPY:
 
     def get_delegated_pwr(self, delegator_address: str, validator_address: str):
         url = f"{self.__rpc_node_url}/validator/delegator/delegatedPWROfAddress/?userAddress={delegator_address}&validatorAddress={validator_address}"
-        response = get_response(url, self.timout)
+        response = get_response(url, self.timeout)
         data = response.json()
         return data.get('delegatedPWR')
 
     def get_share_value(self, validator_address: str):
         url = f"{self.__rpc_node_url}/validator/shareValue/?validatorAddress={validator_address}"
-        response = get_response(url, self.timout)
+        response = get_response(url, self.timeout)
         data = response.json()
         return data.get('shareValue')
 
