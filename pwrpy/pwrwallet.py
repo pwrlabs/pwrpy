@@ -20,7 +20,10 @@ class PWRWallet:
         else:
             raise ValueError("Invalid private key format")
 
-        self.pwrpy = pwrpy
+        if pwrpy is None:
+            self.pwrpy = PWRPY()
+        else:
+            self.pwrpy = pwrpy
 
     def get_address(self):
         return eth_account.Account.from_key(self.private_key).address

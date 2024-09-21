@@ -30,7 +30,7 @@ It provides an easy interface for wallet management and sending transactions on 
 
 ```bash
 # latest official release (main branch)
-pip install pwrpy
+pip3 install pwrpy
 ```
 
 ## 🌐 Documentation
@@ -53,7 +53,7 @@ from pwrpy.pwrwallet import PWRWallet
 ```python
 private_key = "0xac0974bec...f80"
 pwr = PWRPY()
-wallet = PWRWallet(private_key, pwr)
+wallet = PWRWallet(private_key)
 ```
 
 **Get wallet address:**
@@ -65,8 +65,7 @@ address = wallet.get_address()
 **Get wallet balance:**
 
 ```python
-address = wallet.get_address()
-balance = pwr.get_balance_of_address(address)
+balance = wallet.get_balance()
 ```
 
 **Get private key:**

@@ -3,7 +3,7 @@ from pwrpy.pwrwallet import PWRWallet
 
 private_key = "0x9D4428C6E0638331B4866B70C831F8BA51C11B031F4B55EED4087BBB8EF0151F"
 pwr = PWRPY()
-wallet = PWRWallet(private_key, pwr)
+wallet = PWRWallet(private_key)
 
 GREEN = "\033[92m"
 RESET = "\033[0m"
@@ -14,10 +14,10 @@ print(ORANGE + "Tests for Governance Update" + RESET)
 address = wallet.get_address()
 print(GREEN + "Address:" + RESET, address)
 
-nonce = pwr.get_nonce_of_address(address).data
+nonce = wallet.get_nonce().data
 print(GREEN + "Nonce:" + RESET, nonce)
 
-balance = pwr.get_balance_of_address(address)
+balance = wallet.get_balance()
 print(GREEN + "Balance:" + RESET, balance)
 
 blocks_count = pwr.get_blocks_count()
