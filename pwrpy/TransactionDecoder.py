@@ -2,8 +2,7 @@ from eth_utils import to_hex
 from eth_account import Account
 from eth_account.messages import encode_defunct
 
-from pwrpy.pwrapisdk import PWRPY
-
+from pwrpy.pwrsdk import PWRPY
 
 class TransactionDecoder:
     @staticmethod
