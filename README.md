@@ -44,7 +44,7 @@ Play with [Code Examples](https://github.com/keep-pwr-strong/pwr-components/) ðŸ
 **Import the library:**
 
 ```python
-from pwrpy.pwrapisdk import PWRPY
+from pwrpy.pwrsdk import PWRPY
 from pwrpy.pwrwallet import PWRWallet
 ```
 
@@ -77,14 +77,14 @@ pk = wallet.get_private_key()
 **Transfer PWR tokens:**
 
 ```python
-transfer = wallet.transfer_pwr("recipientAddress", 100000, nonce)
+transfer = wallet.transfer_pwr("recipientAddress", 100000)
 ```
 
 Sending a transcation to the PWR Chain returns a Response object, which specified if the transaction was a success, and returns relevant data.
 If the transaction was a success, you can retrieive the transaction hash, if it failed, you can fetch the error.
 
 ```python
-transfer = wallet.transfer_pwr("recipientAddress", 100000, nonce)
+transfer = wallet.transfer_pwr("recipientAddress", 100000)
 if transfer.success:
     print("Transfer:", transfer.__dict__)
 else:
@@ -95,7 +95,7 @@ else:
 
 ```python
 data = "Hello World!"
-sendVmData = wallet.send_vm_data_transaction(123, data.encode(), nonce)
+sendVmData = wallet.send_vm_data_transaction(123, data.encode())
 if sendVmData.success:
     print("SendVmData:", sendVmData.__dict__)
 else:

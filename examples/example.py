@@ -1,7 +1,7 @@
-from pwrpy.pwrapisdk import PWRPY
+from pwrpy.pwrsdk import PWRPY
 from pwrpy.pwrwallet import PWRWallet
 
-private_key = "0x9D4428C6E0638331B4866B70C831F8BA51C11B031F4B55EED4087BBB8EF0151F"
+private_key = "0x04828e90065864c111871769c601d7de2246570b39dd37c19ccac16c14b18f72"
 pwr = PWRPY()
 wallet = PWRWallet(private_key)
 
@@ -14,7 +14,7 @@ print(ORANGE + "Tests for Governance Update" + RESET)
 address = wallet.get_address()
 print(GREEN + "Address:" + RESET, address)
 
-nonce = wallet.get_nonce().data
+nonce = wallet.get_nonce()
 print(GREEN + "Nonce:" + RESET, nonce)
 
 balance = wallet.get_balance()
@@ -50,14 +50,14 @@ print(GREEN + "StandbyValidators:" + RESET, standby_validators)
 active_validators = pwr.get_active_validators()
 print(GREEN + "ActiveValidators:" + RESET, active_validators)
 
-transfer = wallet.transfer_pwr("0x61bd8fc1e30526aaf1c4706ada595d6d236d9883", 100000, nonce)
+transfer = wallet.transfer_pwr(wallet.get_address(), 100)
 if transfer.success:
     print(GREEN + "Transfer:" + RESET, transfer.__dict__)
 else:
     print(ORANGE + "FAILED!" + RESET)
 
 data = "Hello World!"
-sendVmData = wallet.send_vm_data_transaction(123, data.encode(), nonce+1)
+sendVmData = wallet.send_vm_data_transaction(123, data.encode())
 if sendVmData.success:
     print(GREEN + "SendVmData:" + RESET, sendVmData.__dict__)
 else:

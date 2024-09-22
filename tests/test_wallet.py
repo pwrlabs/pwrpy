@@ -1,6 +1,6 @@
 ### Tests for the PWR Wallet functions
 
-from pwrpy.pwrapisdk import PWRPY
+from pwrpy.pwrsdk import PWRPY
 from pwrpy.pwrwallet import PWRWallet
 
 sdk = PWRPY()

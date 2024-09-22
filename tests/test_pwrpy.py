@@ -1,5 +1,5 @@
 ### Tests for the PWRPY API SDK functions
-from pwrpy.pwrapisdk import PWRPY
+from pwrpy.pwrsdk import PWRPY
 
 sdk = PWRPY()
 address = "0xf6fe6a14b3aac06c2c102cf5f028df35157f9770"

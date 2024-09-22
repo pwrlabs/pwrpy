@@ -1,7 +1,7 @@
 import eth_account
 from pwrpy.signer import Signature
 from pwrpy.TransactionBuilder import TransactionBuilder
-from pwrpy.pwrapisdk import PWRPY
+from pwrpy.pwrsdk import PWRPY
 from pwrpy.models.Response import ApiResponse
 
 
@@ -32,7 +32,7 @@ class PWRWallet:
         return self.pwrpy.get_balance_of_address(self.get_address())
 
     def get_nonce(self):
-        return self.pwrpy.get_nonce_of_address(self.get_address())
+        return self.pwrpy.get_nonce_of_address(self.get_address()).data
 
     def get_private_key(self):
         return self.private_key
@@ -55,35 +55,45 @@ class PWRWallet:
         return self.get_signed_transaction(
             TransactionBuilder.get_transfer_pwr_transaction(to, amount, nonce, self.pwrpy.get_chainId()))
 
-    def transfer_pwr(self, to, amount, nonce):
+    def transfer_pwr(self, to, amount, nonce = None):
+        if nonce is None:
+            nonce = self.get_nonce()
         return self.pwrpy.broadcast_transaction(self.get_signed_transfer_pwr_transaction(to, amount, nonce))
 
     def get_signed_join_transaction(self, ip, nonce):
         return self.get_signed_transaction(
             TransactionBuilder.get_join_transaction(ip, nonce, self.pwrpy.get_chainId()))
 
-    def join(self, ip, nonce):
+    def join(self, ip, nonce = None):
+        if nonce is None:
+            nonce = self.get_nonce()
         return self.pwrpy.broadcast_transaction(self.get_signed_join_transaction(ip, nonce))
 
     def get_signed_claim_active_node_spot_transaction(self, nonce):
         return self.get_signed_transaction(
             TransactionBuilder.get_claim_active_node_spot_transaction(nonce, self.pwrpy.get_chainId()))
 
-    def claim_active_node_spot(self, nonce):
+    def claim_active_node_spot(self, nonce = None):
+        if nonce is None:
+            nonce = self.get_nonce()
         return self.pwrpy.broadcast_transaction(self.get_signed_claim_active_node_spot_transaction(nonce))
 
     def get_signed_delegate_transaction(self, validator, amount, nonce):
         return self.get_signed_transaction(
             TransactionBuilder.get_delegate_transaction(validator, amount, nonce, self.pwrpy.get_chainId()))
 
-    def delegate(self, validator, amount, nonce):
+    def delegate(self, validator, amount, nonce = None):
+        if nonce is None:
+            nonce = self.get_nonce()
         return self.pwrpy.broadcast_transaction(self.get_signed_delegate_transaction(validator, amount, nonce))
 
     def get_signed_withdraw_transaction(self, validator, shares_amount, nonce):
         return self.get_signed_transaction(
             TransactionBuilder.get_withdraw_transaction(validator, shares_amount, nonce, self.pwrpy.get_chainId()))
 
-    def withdraw(self, validator, shares_amount, nonce):
+    def withdraw(self, validator, shares_amount, nonce = None):
+        if nonce is None:
+            nonce = self.get_nonce()
         return self.pwrpy.broadcast_transaction(
             self.get_signed_withdraw_transaction(validator, shares_amount, nonce))
 
@@ -91,21 +101,27 @@ class PWRWallet:
         return self.get_signed_transaction(
             TransactionBuilder.get_vm_data_transaction(vm_id, data, nonce, self.pwrpy.get_chainId()))
 
-    def send_vm_data_transaction(self, vm_id, data, nonce):
+    def send_vm_data_transaction(self, vm_id, data, nonce = None):
+        if nonce is None:
+            nonce = self.get_nonce()
         return self.pwrpy.broadcast_transaction(self.get_signed_vm_data_transaction(vm_id, data, nonce))
 
     def get_signed_claim_vm_id_transaction(self, vm_id, nonce):
         return self.get_signed_transaction(
             TransactionBuilder.get_claim_vm_id_transaction(vm_id, nonce, self.pwrpy.get_chainId()))
 
-    def claim_vm_id(self, vm_id, nonce):
+    def claim_vm_id(self, vm_id, nonce = None):
+        if nonce is None:
+            nonce = self.get_nonce()
         return self.pwrpy.broadcast_transaction(self.get_signed_claim_vm_id_transaction(vm_id, nonce))
 
     def get_signed_set_guardian_transaction(self, guardian, expiry_date, nonce):
         return self.get_signed_transaction(
             TransactionBuilder.get_set_guardian_transaction(guardian, expiry_date, nonce, self.pwrpy.get_chainId()))
 
-    def set_guardian(self, guardian, expiry_date, nonce):
+    def set_guardian(self, guardian, expiry_date, nonce = None):
+        if nonce is None:
+            nonce = self.get_nonce()
         return self.pwrpy.broadcast_transaction(
             self.get_signed_set_guardian_transaction(guardian, expiry_date, nonce))
 
@@ -113,21 +129,27 @@ class PWRWallet:
         return self.get_signed_transaction(
             TransactionBuilder.get_remove_guardian_transaction(nonce, self.pwrpy.get_chainId()))
 
-    def remove_guardian(self, nonce):
+    def remove_guardian(self, nonce = None):
+        if nonce is None:
+            nonce = self.get_nonce()
         return self.pwrpy.broadcast_transaction(self.get_signed_remove_guardian_transaction(nonce))
 
     def get_signed_guardian_approval_transaction(self, transactions, nonce):
         return self.get_signed_transaction(
             TransactionBuilder.get_guardian_approval_transaction(transactions, nonce, self.pwrpy.get_chainId()))
 
-    def send_guardian_approval_transaction(self, transactions, nonce):
+    def send_guardian_approval_transaction(self, transactions, nonce = None):
+        if nonce is None:
+            nonce = self.get_nonce()
         return self.pwrpy.broadcast_transaction(self.get_signed_guardian_approval_transaction(transactions, nonce))
 
     def get_signed_payable_vm_data_transaction(self, vm_id, value, data, nonce):
         return self.get_signed_transaction(
             TransactionBuilder.get_payable_vm_data_transaction(vm_id, value, data, nonce, self.pwrpy.get_chainId()))
 
-    def send_payable_vm_data_transaction(self, vm_id, value, data, nonce):
+    def send_payable_vm_data_transaction(self, vm_id, value, data, nonce = None):
+        if nonce is None:
+            nonce = self.get_nonce()
         try:
             return self.pwrpy.broadcast_transaction(
                 self.get_signed_payable_vm_data_transaction(vm_id, value, data, nonce))
@@ -138,7 +160,9 @@ class PWRWallet:
         return self.get_signed_transaction(
             TransactionBuilder.get_validator_remove_transaction(validator, nonce, self.pwrpy.get_chainId()))
 
-    def send_validator_remove_transaction(self, validator, nonce):
+    def send_validator_remove_transaction(self, validator, nonce = None):
+        if nonce is None:
+            nonce = self.get_nonce()
         return self.pwrpy.broadcast_transaction(self.get_signed_validator_remove_transaction(validator, nonce))
 
     def get_signed_conduit_approval_transaction(self, vm_id, transactions, nonce):
@@ -146,7 +170,9 @@ class PWRWallet:
             TransactionBuilder.get_conduit_approval_transaction(vm_id, transactions, nonce,
                                                                 self.pwrpy.get_chainId()))
 
-    def conduit_approve(self, vm_id, transactions, nonce):
+    def conduit_approve(self, vm_id, transactions, nonce = None):
+        if nonce is None:
+            nonce = self.get_nonce()
         return self.pwrpy.broadcast_transaction(
             self.get_signed_conduit_approval_transaction(vm_id, transactions, nonce))
 
@@ -154,7 +180,9 @@ class PWRWallet:
         return self.get_signed_transaction(
             TransactionBuilder.get_set_conduits_transaction(vm_id, conduits, nonce, self.pwrpy.get_chainId()))
 
-    def set_conduits(self, vm_id, conduits, nonce):
+    def set_conduits(self, vm_id, conduits, nonce = None):
+        if nonce is None:
+            nonce = self.get_nonce()
         return self.pwrpy.broadcast_transaction(self.get_signed_set_conduit_transaction(vm_id, conduits, nonce))
 
     def get_signed_move_stake_transaction(self, shares_amount, from_validator, to_validator, nonce):
@@ -162,7 +190,9 @@ class PWRWallet:
             TransactionBuilder.get_move_stake_transaction(shares_amount, from_validator, to_validator, nonce,
                                                           self.pwrpy.get_chainId()))
 
-    def move_stake(self, shares_amount, from_validator, to_validator, nonce):
+    def move_stake(self, shares_amount, from_validator, to_validator, nonce = None):
+        if nonce is None:
+            nonce = self.get_nonce()
         return self.pwrpy.broadcast_transaction(
             self.get_signed_move_stake_transaction(shares_amount, from_validator, to_validator, nonce))
 
@@ -175,7 +205,9 @@ class PWRWallet:
                                                                               nonce, self.pwrpy.get_chainId()))
 
     def create_proposal_change_early_withdrawal_penalty(self, withdrawal_penalty_time, withdrawal_penalty, title,
-                                                        description, nonce):
+                                                        description, nonce = None):
+        if nonce is None:
+            nonce = self.get_nonce()
         return self.pwrpy.broadcast_transaction(
             self.get_signed_change_early_withdraw_penalty_proposal_txn(withdrawal_penalty_time, withdrawal_penalty,
                                                                        title, description, nonce))
@@ -185,7 +217,9 @@ class PWRWallet:
             TransactionBuilder.get_change_fee_per_byte_proposal_txn(fee_per_byte, title, description, nonce,
                                                                     self.pwrpy.get_chainId()))
 
-    def create_proposal_change_fee_per_byte(self, fee_per_byte, title, description, nonce):
+    def create_proposal_change_fee_per_byte(self, fee_per_byte, title, description, nonce = None):
+        if nonce is None:
+            nonce = self.get_nonce()
         return self.pwrpy.broadcast_transaction(
             self.get_signed_change_fee_per_byte_proposal_txn(fee_per_byte, title, description, nonce))
 
@@ -194,7 +228,9 @@ class PWRWallet:
             TransactionBuilder.get_change_max_block_size_proposal_txn(max_block_size, title, description, nonce,
                                                                       self.pwrpy.get_chainId()))
 
-    def create_proposal_change_max_block_size(self, max_block_size, title, description, nonce):
+    def create_proposal_change_max_block_size(self, max_block_size, title, description, nonce = None):
+        if nonce is None:
+            nonce = self.get_nonce()
         return self.pwrpy.broadcast_transaction(
             self.get_signed_change_max_block_size_proposal_txn(max_block_size, title, description, nonce))
 
@@ -203,7 +239,9 @@ class PWRWallet:
             TransactionBuilder.get_change_max_txn_size_proposal_txn(max_txn_size, title, description, nonce,
                                                                     self.pwrpy.get_chainId()))
 
-    def create_proposal_change_max_txn_size(self, max_txn_size, title, description, nonce):
+    def create_proposal_change_max_txn_size(self, max_txn_size, title, description, nonce = None):
+        if nonce is None:
+            nonce = self.get_nonce()
         return self.pwrpy.broadcast_transaction(
             self.get_signed_change_max_txn_size_proposal_txn(max_txn_size, title, description, nonce))
 
@@ -212,7 +250,9 @@ class PWRWallet:
             TransactionBuilder.get_change_overall_burn_percentage_proposal_txn(burn_percentage, title, description,
                                                                                nonce, self.pwrpy.get_chainId()))
 
-    def create_proposal_change_overall_burn_percentage(self, burn_percentage, title, description, nonce):
+    def create_proposal_change_overall_burn_percentage(self, burn_percentage, title, description, nonce = None):
+        if nonce is None:
+            nonce = self.get_nonce()
         return self.pwrpy.broadcast_transaction(
             self.get_signed_change_overall_burn_percentage_proposal_txn(burn_percentage, title, description, nonce))
 
@@ -221,7 +261,9 @@ class PWRWallet:
             TransactionBuilder.get_change_reward_per_year_proposal_txn(reward_per_year, title, description, nonce,
                                                                        self.pwrpy.get_chainId()))
 
-    def create_proposal_change_reward_per_year(self, reward_per_year, title, description, nonce):
+    def create_proposal_change_reward_per_year(self, reward_per_year, title, description, nonce = None):
+        if nonce is None:
+            nonce = self.get_nonce()
         return self.pwrpy.broadcast_transaction(
             self.get_signed_change_reward_per_year_proposal_txn(reward_per_year, title, description, nonce))
 
@@ -230,7 +272,9 @@ class PWRWallet:
             TransactionBuilder.get_change_validator_count_limit_proposal_txn(validator_count_limit, title, description,
                                                                              nonce, self.pwrpy.get_chainId()))
 
-    def create_proposal_change_validator_count_limit(self, validator_count_limit, title, description, nonce):
+    def create_proposal_change_validator_count_limit(self, validator_count_limit, title, description, nonce = None):
+        if nonce is None:
+            nonce = self.get_nonce()
         return self.pwrpy.broadcast_transaction(
             self.get_signed_change_validator_count_limit_proposal_txn(validator_count_limit, title, description, nonce))
 
@@ -239,7 +283,9 @@ class PWRWallet:
             TransactionBuilder.get_change_validator_joining_fee_proposal_txn(joining_fee, title, description, nonce,
                                                                              self.pwrpy.get_chainId()))
 
-    def create_proposal_change_validator_joining_fee(self, joining_fee, title, description, nonce):
+    def create_proposal_change_validator_joining_fee(self, joining_fee, title, description, nonce = None):
+        if nonce is None:
+            nonce = self.get_nonce()
         return self.pwrpy.broadcast_transaction(
             self.get_signed_change_validator_joining_fee_proposal_txn(joining_fee, title, description, nonce))
 
@@ -248,7 +294,9 @@ class PWRWallet:
             TransactionBuilder.get_change_vm_id_claiming_fee_proposal_txn(claiming_fee, title, description, nonce,
                                                                           self.pwrpy.get_chainId()))
 
-    def create_proposal_change_vm_id_claiming_fee(self, claiming_fee, title, description, nonce):
+    def create_proposal_change_vm_id_claiming_fee(self, claiming_fee, title, description, nonce = None):
+        if nonce is None:
+            nonce = self.get_nonce()
         return self.pwrpy.broadcast_transaction(
             self.get_signed_change_vm_id_claiming_fee_proposal_txn(claiming_fee, title, description, nonce))
 
@@ -257,7 +305,9 @@ class PWRWallet:
             TransactionBuilder.get_change_vm_owner_txn_fee_share_proposal_txn(fee_share, title, description, nonce,
                                                                               self.pwrpy.get_chainId()))
 
-    def create_proposal_change_vm_owner_txn_fee_share(self, fee_share, title, description, nonce):
+    def create_proposal_change_vm_owner_txn_fee_share(self, fee_share, title, description, nonce = None):
+        if nonce is None:
+            nonce = self.get_nonce()
         return self.pwrpy.broadcast_transaction(
             self.get_signed_change_vm_owner_txn_fee_share_proposal_txn(fee_share, title, description, nonce))
 
@@ -265,12 +315,16 @@ class PWRWallet:
         return self.get_signed_transaction(
             TransactionBuilder.get_other_proposal_txn(title, description, nonce, self.pwrpy.get_chainId()))
 
-    def create_proposal_other_proposal(self, title, description, nonce):
+    def create_proposal_other_proposal(self, title, description, nonce = None):
+        if nonce is None:
+            nonce = self.get_nonce()
         return self.pwrpy.broadcast_transaction(self.get_signed_other_proposal_txn(title, description, nonce))
 
     def get_signed_vote_on_proposal_txn(self, proposal_hash, vote, nonce):
         return self.get_signed_transaction(
             TransactionBuilder.get_vote_on_proposal_txn(proposal_hash, vote, nonce, self.pwrpy.get_chainId()))
 
-    def vote_on_proposal(self, proposal_hash, vote, nonce):
+    def vote_on_proposal(self, proposal_hash, vote, nonce = None):
+        if nonce is None:
+            nonce = self.get_nonce()
         return self.pwrpy.broadcast_transaction(self.get_signed_vote_on_proposal_txn(proposal_hash, vote, nonce))
