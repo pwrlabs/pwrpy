@@ -54,7 +54,7 @@ ORANGE = "\033[93m"
 # print(GREEN + "Active Validators:" + RESET, sdk.get_active_validators())
 # print(GREEN + "Transactions from block 1 to 4:" + RESET, sdk.get_vm_data_txns(1, 4, 10023))
 # print(GREEN + "Owner of vm 100:" + RESET, sdk.get_owner_of_vm(100))
-# print(GREEN + "Nonce:" + RESET, sdk.get_nonce_of_address(address).data)
+# print(GREEN + "Nonce:" + RESET, sdk.get_nonce_of_address(address))
 # print(GREEN + "Balance:" + RESET, sdk.get_balance_of_address(address))
 # print(GREEN + "Guardian:" + RESET, sdk.get_guardian_of_address(address))
 # print(GREEN + "Delegatees:" + RESET, sdk.get_delegatees(address))

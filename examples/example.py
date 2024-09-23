@@ -17,6 +17,9 @@ print(GREEN + "Address:" + RESET, address)
 nonce = wallet.get_nonce()
 print(GREEN + "Nonce:" + RESET, nonce)
 
+nonce = pwr.get_nonce_of_address(address)
+print(GREEN + "NonceAddress:" + RESET, nonce)
+
 balance = wallet.get_balance()
 print(GREEN + "Balance:" + RESET, balance)
 

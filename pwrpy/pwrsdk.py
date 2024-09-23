@@ -115,7 +115,7 @@ class PWRPY:
             if responseRaw.status_code != 200:
                 return ApiResponse(False, response.get("message"))
             else:
-                return ApiResponse(True, response.get("message"), response.get("nonce"))
+                return ApiResponse(True, response.get("message"), response.get("nonce")).data
 
         except Exception as e:
             return ApiResponse(False, str(e))
