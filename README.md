@@ -133,7 +133,7 @@ balance = pwr.get_balance_of_address('0x...')
 Gets the nonce/transaction count of a specific address.
 
 ```python
-nonce = pwr.get_nonce_of_address('0x...').data
+nonce = pwr.get_nonce_of_address('0x...')
 ```
 
 **Broadcast Txn:**

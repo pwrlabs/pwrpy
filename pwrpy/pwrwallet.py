@@ -32,7 +32,7 @@ class PWRWallet:
         return self.pwrpy.get_balance_of_address(self.get_address())
 
     def get_nonce(self):
-        return self.pwrpy.get_nonce_of_address(self.get_address()).data
+        return self.pwrpy.get_nonce_of_address(self.get_address())
 
     def get_private_key(self):
         return self.private_key
