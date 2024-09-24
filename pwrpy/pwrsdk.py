@@ -334,7 +334,12 @@ class PWRPY:
             vmDataTxn = data.get('transactions')
             txn_array = []
             for txn_object in vmDataTxn:
-                txn = VmDataTransaction.from_json(txn_object)
+                txn = VmDataTransaction.from_json(
+                    txn_object,
+                    txn_object.get('blockNumber'),
+                    txn_object.get('timestamp'),
+                    txn_object.get('positionInBlock')
+                )
                 txn_array.append(txn)
             return txn_array
 
@@ -348,7 +353,12 @@ class PWRPY:
             vmDataTxn = data.get('transactions')
             txn_array = []
             for txn_object in vmDataTxn:
-                txn = VmDataTransaction.from_json(txn_object)
+                txn = VmDataTransaction.from_json(
+                    txn_object,
+                    txn_object.get('blockNumber'),
+                    txn_object.get('timestamp'),
+                    txn_object.get('positionInBlock')
+                )
                 txn_array.append(txn)
 
             return txn_array
