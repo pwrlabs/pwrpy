@@ -136,6 +136,18 @@ Gets the nonce/transaction count of a specific address.
 nonce = pwr.get_nonce_of_address('0x...')
 ```
 
+**Get VM Data:**
+
+```python
+start_block = 843500
+end_block = 843750
+vm_id = 123
+
+transactions = pwr.get_vm_data_txns(start_block, end_block, vm_id)
+for txs in transactions:
+    print("Data:", txs.data)
+```
+
 **Broadcast Txn:**
 
 Broadcasts a signed transaction to the network.
