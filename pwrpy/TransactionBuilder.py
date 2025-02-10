@@ -8,9 +8,9 @@ class TransactionBuilder:
     @staticmethod
     def get_transaction_base(identifier, nonce, chain_id):
         buffer = bytearray(6)
-        buffer[0] = identifier
-        buffer[1] = int.from_bytes(chain_id, byteorder='big')
-        buffer[2:6] = nonce.to_bytes(4, 'big')
+        buffer[0:4] = identifier.to_bytes(4, 'big')
+        buffer[4] = int.from_bytes(chain_id, byteorder='big')
+        buffer[5:9] = nonce.to_bytes(4, 'big')
         return bytes(buffer)
 
     @staticmethod
@@ -86,7 +86,7 @@ class TransactionBuilder:
             raise RuntimeError("Nonce cannot be negative")
 
         transaction_base = TransactionBuilder.get_transaction_base(5, nonce, chain_id)
-        buffer = transaction_base + struct.pack(">Q", vm_id) + data
+        buffer = transaction_base + struct.pack(">Q", vm_id) + struct.pack(">I", len(data)) + data
 
         return buffer
 
@@ -150,31 +150,9 @@ class TransactionBuilder:
         # Get the base transaction details as a byte array
         transaction_base = TransactionBuilder.get_transaction_base(11, nonce, chain_id)
 
-        # Calculate the total length of the buffer: base length + 8 bytes for vmId + data length + 8 bytes for value
-        buffer_length = len(transaction_base) + 8 + len(data) + 8
+        buffer = transaction_base + struct.pack(">Q", vm_id) + struct.pack(">I", len(data)) + data + struct.pack(">Q", value)
 
-        # Create a byte buffer
-        buffer = bytearray(buffer_length)
-
-        # Start offset for each segment
-        offset = 0
-
-        # Copy transaction base into buffer
-        buffer[offset:offset + len(transaction_base)] = transaction_base
-        offset += len(transaction_base)
-
-        # Pack vmId into buffer (8 bytes, big-endian)
-        struct.pack_into('>Q', buffer, offset, vm_id)
-        offset += 8
-
-        # Copy data into buffer
-        buffer[offset:offset + len(data)] = data
-        offset += len(data)
-
-        # Pack value into buffer (8 bytes, big-endian)
-        struct.pack_into('>Q', buffer, offset, value)
-
-        return bytes(buffer)
+        return buffer
 
     @staticmethod
     def get_conduit_approval_transaction(vm_id: int, transactions: List[bytes], nonce: int, chain_id: int) -> bytes:

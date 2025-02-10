@@ -65,3 +65,9 @@ if sendVmData.success:
     print(GREEN + "SendVmData:" + RESET, sendVmData.__dict__)
 else:
     print(ORANGE + "FAILED!" + RESET)
+
+sendPayableVmData = wallet.send_payable_vm_data_transaction(123, 100, data.encode())
+if sendVmData.success:
+    print(GREEN + "SendPayableVmData:" + RESET, sendVmData.__dict__)
+else:
+    print(ORANGE + "FAILED!" + RESET)
