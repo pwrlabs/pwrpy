@@ -3,7 +3,7 @@ from pwrpy.signer import Signature
 from pwrpy.TransactionBuilder import TransactionBuilder
 from pwrpy.pwrsdk import PWRPY
 from pwrpy.models.Response import ApiResponse
-
+from pwrpy.models.AES256 import AES256
 
 class PWRWallet:
     def __init__(self, private_key=None, pwrpy: PWRPY = None):
@@ -54,6 +54,32 @@ class PWRWallet:
     def get_signed_transfer_pwr_transaction(self, to, amount, nonce):
         return self.get_signed_transaction(
             TransactionBuilder.get_transfer_pwr_transaction(to, amount, nonce, self.pwrpy.get_chainId()))
+
+    def store_wallet(self, path: str, password: str) -> None:
+        try:
+            private_key_bytes = self.private_key.to_bytes(
+                (self.private_key.bit_length() + 7) // 8, 
+                byteorder='big'
+            )
+            encrypted_private_key = AES256.encrypt(private_key_bytes, password)
+            
+            with open(path, 'wb') as f:
+                f.write(encrypted_private_key)
+        except Exception as e:
+            raise Exception(f"Failed to store wallet: {str(e)}")
+
+    @staticmethod
+    def load_wallet(path: str, password: str, pwrpy: PWRPY = None) -> 'PWRWallet':
+        try:
+            with open(path, 'rb') as f:
+                encrypted_private_key = f.read()
+            
+            private_key_bytes = AES256.decrypt(encrypted_private_key, password)
+            
+            return PWRWallet(private_key_bytes, pwrpy)
+        except Exception as e:
+            print(f"Error loading wallet: {e}")
+            return None
 
     def transfer_pwr(self, to, amount, nonce = None):
         if nonce is None:
