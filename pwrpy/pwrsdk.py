@@ -10,7 +10,7 @@ from pwrpy.models.Transaction import VmDataTransaction
 from pwrpy.models.Block import Block
 from pwrpy.models.Validator import Validator
 from pwrpy.models.Response import ApiResponse, TransactionForGuardianApproval, EarlyWithdrawPenaltyResponse
-from pwrpy.models.TxSubscription import IvaTransactionSubscription
+from pwrpy.models.TxSubscription import VidaTransactionSubscription
 
 def get_response(url: str, timeout):
     """
@@ -768,14 +768,14 @@ class PWRPY:
 
         return penalties
     
-    def subscribe_to_iva_transactions(
+    def subscribe_to_vida_transactions(
         self,
         vm_id: int,
         starting_block: int,
         handler: Callable[[VmDataTransaction], None],
         poll_interval: int = 100
-    ) -> IvaTransactionSubscription:
-        subscription = IvaTransactionSubscription(
+    ) -> VidaTransactionSubscription:
+        subscription = VidaTransactionSubscription(
             rpc=self,
             vm_id=vm_id,
             starting_block=starting_block,

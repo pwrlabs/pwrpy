@@ -3,7 +3,7 @@ from pwrpy.models.Transaction import VmDataTransaction
 import threading
 import time
 
-class IvaTransactionSubscription:
+class VidaTransactionSubscription:
     def __init__(self, 
                 rpc: 'PWRPY', 
                 vm_id: int, 
@@ -24,7 +24,7 @@ class IvaTransactionSubscription:
 
     def start(self):
         if self.running.is_set():
-            print("IvaTransactionSubscription is already running")
+            print("VidaTransactionSubscription is already running")
             return
 
         self.running.set()

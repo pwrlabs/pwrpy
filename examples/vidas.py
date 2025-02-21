@@ -14,5 +14,5 @@ def handle_transaction(tx: VmDataTransaction):
     except Exception as e:
         print(f"Error processing transaction: {e}")
 
-shit = rpc.subscribe_to_iva_transactions(vm_id, starting_block, handler=handle_transaction)
+shit = rpc.subscribe_to_vida_transactions(vm_id, starting_block, handler=handle_transaction)
 print(f"SHIT: {shit}")
