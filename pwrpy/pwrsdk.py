@@ -1,6 +1,6 @@
-import hashlib
 import json
 import requests
+from eth_hash.auto import keccak
 from requests.exceptions import Timeout, RequestException
 from binascii import hexlify
 from typing import Callable
@@ -95,7 +95,7 @@ class PWRPY:
             response = requests.post(url, json=data, headers=headers, timeout=(self.connection_timeout, self.so_timeout))
 
             if response.status_code == 200:
-                txnHash = "0x" + hashlib.sha3_256(txn).hexdigest()
+                txnHash = "0x" + keccak(txn).hex()
                 return ApiResponse(True, None, bytes.fromhex(txnHash[2:]))
             elif response.status_code == 400:
                 error_message = json.loads(response.text)["message"]
@@ -770,14 +770,14 @@ class PWRPY:
     
     def subscribe_to_vida_transactions(
         self,
-        vm_id: int,
+        vida_id: int,
         starting_block: int,
         handler: Callable[[VmDataTransaction], None],
         poll_interval: int = 100
     ) -> VidaTransactionSubscription:
         subscription = VidaTransactionSubscription(
             rpc=self,
-            vm_id=vm_id,
+            vida_id=vida_id,
             starting_block=starting_block,
             handler=handler,
             poll_interval=poll_interval
