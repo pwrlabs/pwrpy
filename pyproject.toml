@@ -13,7 +13,7 @@ repository = "https://github.com/pwrlabs/pwrpy"
 documentation = "https://docs.pwrlabs.io/"
 
 [tool.poetry.dependencies]
-python = ">=3.8, <3.13"
+python = ">=3.8"
 requests = "^2.32.3"
 eth-account = "^0.13.3"
 coincurve = "^20.0.0"

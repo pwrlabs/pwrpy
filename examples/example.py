@@ -56,19 +56,19 @@ print(GREEN + "ActiveValidators:" + RESET, active_validators)
 
 transfer = wallet.transfer_pwr(wallet.get_address(), 100)
 if transfer.success:
-    print(GREEN + "Transfer:" + RESET, transfer.__dict__)
+    print(GREEN + "Transfer:" + RESET, f"0x{transfer.data.hex()}")
 else:
     print(ORANGE + "FAILED!" + RESET)
 
 data = "Hello World!"
 sendVmData = wallet.send_vm_data_transaction(123, data.encode())
 if sendVmData.success:
-    print(GREEN + "SendVmData:" + RESET, sendVmData.__dict__)
+    print(GREEN + "SendVmData:" + RESET, f"0x{sendVmData.data.hex()}")
 else:
     print(ORANGE + "FAILED!" + RESET)
 
 sendPayableVmData = wallet.send_payable_vm_data_transaction(123, 100, data.encode())
-if sendVmData.success:
-    print(GREEN + "SendPayableVmData:" + RESET, sendVmData.__dict__)
+if sendPayableVmData.success:
+    print(GREEN + "SendPayableVmData:" + RESET, f"0x{sendPayableVmData.data.hex()}")
 else:
     print(ORANGE + "FAILED!" + RESET)
