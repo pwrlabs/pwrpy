@@ -21,7 +21,7 @@ ecdsa = "^0.19.0"
 python-dotenv = "^1.0.0"
 cryptography = "^44.0.2"
 safe-pysha3 = "^1.0.4"
-liboqs-python = { git = "https://github.com/keep-pwr-strong/liboqs-python", rev = "1a29e9342182c829f4fc2ff47b5366796c7ffb64" }
+liboqs-pwr = "^0.12.1"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.2.2"

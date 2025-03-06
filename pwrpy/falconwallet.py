@@ -144,7 +144,7 @@ class Falcon512Wallet:
             nonce = self.get_nonce()
         if fee_per_byte is None:
             fee_per_byte = self.pwrpy.get_fee_per_byte()
-        
+
         tx = TransactionBuilder.get_falcon_set_public_key_transaction(
             public_key, nonce, self.pwrpy.get_chainId(), self.get_address(), fee_per_byte
         )
@@ -152,14 +152,14 @@ class Falcon512Wallet:
         return self.pwrpy.broadcast_transaction(signature)
     
     def join_as_validator(self, ip: str, fee_per_byte = None, nonce = None):
+        response = self.__make_sure_public_key_is_set(fee_per_byte)
+        if response != None and response.success == False: return response
+
         if nonce is None:
             nonce = self.get_nonce()
         if fee_per_byte is None:
             fee_per_byte = self.pwrpy.get_fee_per_byte()
 
-        response = self.__make_sure_public_key_is_set(fee_per_byte, nonce)
-        if response != None and response.success == False: return response
-        
         tx = TransactionBuilder.get_falcon_join_as_validator_transaction(
             ip, nonce, self.pwrpy.get_chainId(), self.get_address(), fee_per_byte
         )
@@ -167,14 +167,14 @@ class Falcon512Wallet:
         return self.pwrpy.broadcast_transaction(signature)
     
     def delegate(self, validator: str, pwr_amount, fee_per_byte = None, nonce = None):
+        response = self.__make_sure_public_key_is_set(fee_per_byte)
+        if response != None and response.success == False: return response
+
         if nonce is None:
             nonce = self.get_nonce()
         if fee_per_byte is None:
             fee_per_byte = self.pwrpy.get_fee_per_byte()
 
-        response = self.__make_sure_public_key_is_set(fee_per_byte, nonce)
-        if response != None and response.success == False: return response
-        
         tx = TransactionBuilder.get_falcon_delegate_transaction(
             validator, pwr_amount, nonce, self.pwrpy.get_chainId(), self.get_address(), fee_per_byte
         )
@@ -182,14 +182,14 @@ class Falcon512Wallet:
         return self.pwrpy.broadcast_transaction(signature)
 
     def change_ip(self, new_ip: str, fee_per_byte = None, nonce = None):
+        response = self.__make_sure_public_key_is_set(fee_per_byte)
+        if response != None and response.success == False: return response
+
         if nonce is None:
             nonce = self.get_nonce()
         if fee_per_byte is None:
             fee_per_byte = self.pwrpy.get_fee_per_byte()
 
-        response = self.__make_sure_public_key_is_set(fee_per_byte, nonce)
-        if response != None and response.success == False: return response
-        
         tx = TransactionBuilder.get_falcon_change_ip_transaction(
             new_ip, nonce, self.pwrpy.get_chainId(), self.get_address(), fee_per_byte
         )
@@ -197,28 +197,28 @@ class Falcon512Wallet:
         return self.pwrpy.broadcast_transaction(signature)
     
     def claim_active_node_spot(self, fee_per_byte = None, nonce = None):
+        response = self.__make_sure_public_key_is_set(fee_per_byte)
+        if response != None and response.success == False: return response
+
         if nonce is None:
             nonce = self.get_nonce()
         if fee_per_byte is None:
             fee_per_byte = self.pwrpy.get_fee_per_byte()
 
-        response = self.__make_sure_public_key_is_set(fee_per_byte, nonce)
-        if response != None and response.success == False: return response
-        
         tx = TransactionBuilder.get_falcon_claim_active_node_spot_transaction(
             nonce, self.pwrpy.get_chainId(), self.get_address(), fee_per_byte
         )
         signature = self.get_signed_transaction(tx)
         return self.pwrpy.broadcast_transaction(signature)
 
-    def transfer_pwr(self, to, amount, fee_per_byte = None, nonce = None): 
+    def transfer_pwr(self, to, amount, fee_per_byte = None, nonce = None):
+        response = self.__make_sure_public_key_is_set(fee_per_byte)
+        if response != None and response.success == False: return response
+
         if nonce is None:
             nonce = self.get_nonce()
         if fee_per_byte is None:
             fee_per_byte = self.pwrpy.get_fee_per_byte()
-
-        response = self.__make_sure_public_key_is_set(fee_per_byte, nonce)
-        if response != None and response.success == False: return response
 
         tx = TransactionBuilder.get_falcon_transfer_pwr_transaction(
             to, amount, nonce, self.pwrpy.get_chainId(), self.get_address(), fee_per_byte
@@ -227,13 +227,13 @@ class Falcon512Wallet:
         return self.pwrpy.broadcast_transaction(signature)
     
     def send_vm_data(self, vm_id, data, fee_per_byte = None, nonce = None):
+        response = self.__make_sure_public_key_is_set(fee_per_byte)
+        if response != None and response.success == False: return response
+
         if nonce is None:
             nonce = self.get_nonce()
         if fee_per_byte is None:
             fee_per_byte = self.pwrpy.get_fee_per_byte()
-
-        response = self.__make_sure_public_key_is_set(fee_per_byte, nonce)
-        if response != None and response.success == False: return response
 
         tx = TransactionBuilder.get_falcon_vm_data_transaction(
             vm_id, data, nonce, self.pwrpy.get_chainId(), self.get_address(), fee_per_byte
@@ -241,8 +241,9 @@ class Falcon512Wallet:
         signature = self.get_signed_transaction(tx)
         return self.pwrpy.broadcast_transaction(signature)
     
-    def __make_sure_public_key_is_set(self, fee_per_byte, nonce):
-        if self.get_nonce() == 0:
+    def __make_sure_public_key_is_set(self, fee_per_byte):
+        nonce = self.get_nonce()
+        if nonce == 0:
             return self.set_public_key(self.get_public_key(), fee_per_byte, nonce)
         else:
             return None
