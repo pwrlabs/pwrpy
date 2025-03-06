@@ -3,7 +3,7 @@ from pwrpy.signer import Signature
 from pwrpy.TransactionBuilder import TransactionBuilder
 from pwrpy.pwrsdk import PWRPY
 from pwrpy.models.Response import ApiResponse
-from pwrpy.models.AES256 import AES256
+from pwrpy.Utils.AES256 import AES256
 
 class PWRWallet:
     def __init__(self, private_key=None, pwrpy: PWRPY = None):
