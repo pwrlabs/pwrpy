@@ -50,108 +50,6 @@ class TransactionBuilder:
         buffer.extend(bytes.fromhex(to))
 
         return bytes(buffer)
-    
-    @staticmethod
-    def get_falcon_set_public_key_transaction(public_key, nonce, chain_id, address, fee_per_byte):
-        if nonce < 0:
-            raise ValueError("Nonce cannot be negative")
-
-        txn_base = TransactionBuilder.get_falcon_transaction_base(1001, nonce, chain_id, address, fee_per_byte)
-
-        buffer = bytearray()
-        buffer.extend(txn_base)
-        buffer.extend(len(public_key).to_bytes(2, byteorder='big'))
-        buffer.extend(public_key)
-        return bytes(buffer)
-    
-    @staticmethod
-    def get_falcon_join_as_validator_transaction(ip: str, nonce, chain_id, address, fee_per_byte):
-        if nonce < 0:
-            raise ValueError("Nonce cannot be negative")
-
-        txn_base = TransactionBuilder.get_falcon_transaction_base(1002, nonce, chain_id, address, fee_per_byte)
-        ip_bytes = ip.encode("utf-8")
-    
-        buffer = bytearray()
-        buffer.extend(txn_base)
-        buffer.extend(len(ip_bytes).to_bytes(2, byteorder='big'))
-        buffer.extend(ip_bytes)
-        return bytes(buffer)
-    
-    @staticmethod
-    def get_falcon_delegate_transaction(validator: str, pwr_amount, nonce, chain_id, address, fee_per_byte):
-        TransactionBuilder.asset_address_validity(validator)
-        if nonce < 0:
-            raise ValueError("Nonce cannot be negative")
-        
-        if len(validator) == 42:
-            validator = validator[2:]
-
-        txn_base = TransactionBuilder.get_falcon_transaction_base(1003, nonce, chain_id, address, fee_per_byte)
-    
-        buffer = bytearray()
-        buffer.extend(txn_base)
-        buffer.extend(bytes.fromhex(validator))
-        buffer.extend(pwr_amount.to_bytes(8, byteorder='big'))
-        return bytes(buffer)
-    
-    @staticmethod
-    def get_falcon_change_ip_transaction(new_ip: str, nonce, chain_id, address, fee_per_byte):
-        if nonce < 0:
-            raise ValueError("Nonce cannot be negative")
-
-        txn_base = TransactionBuilder.get_falcon_transaction_base(1004, nonce, chain_id, address, fee_per_byte)
-        new_ip_bytes = new_ip.encode("utf-8")
-    
-        buffer = bytearray()
-        buffer.extend(txn_base)
-        buffer.extend(len(new_ip_bytes).to_bytes(2, byteorder='big'))
-        buffer.extend(new_ip_bytes)
-        return bytes(buffer)
-    
-    @staticmethod
-    def get_falcon_claim_active_node_spot_transaction(nonce, chain_id, address, fee_per_byte):
-        if nonce < 0:
-            raise ValueError("Nonce cannot be negative")
-
-        txn_base = TransactionBuilder.get_falcon_transaction_base(1005, nonce, chain_id, address, fee_per_byte)
-    
-        buffer = bytearray()
-        buffer.extend(txn_base)
-        return bytes(buffer)
-    
-    @staticmethod
-    def get_falcon_transfer_pwr_transaction(to: str, amount, nonce, chain_id, address, fee_per_byte):
-        TransactionBuilder.asset_address_validity(to)
-        if amount < 0:
-            raise ValueError("Amount cannot be negative")
-        if nonce < 0:
-            raise ValueError("Nonce cannot be negative")
-
-        if len(to) == 42:
-            to = to[2:]
-
-        txn_base = TransactionBuilder.get_falcon_transaction_base(1006, nonce, chain_id, address, fee_per_byte)
-
-        buffer = bytearray()
-        buffer.extend(txn_base)
-        buffer.extend(bytes.fromhex(to))
-        buffer.extend(amount.to_bytes(8, byteorder='big'))
-        return bytes(buffer)
-    
-    @staticmethod
-    def get_falcon_vm_data_transaction(vm_id: int, data: bytes, nonce, chain_id, address, fee_per_byte):
-        if nonce < 0:
-            raise ValueError("Nonce cannot be negative")
-
-        txn_base = TransactionBuilder.get_falcon_transaction_base(1007, nonce, chain_id, address, fee_per_byte)
-    
-        buffer = bytearray()
-        buffer.extend(txn_base)
-        buffer.extend(vm_id.to_bytes(8, byteorder='big'))
-        buffer.extend(len(data).to_bytes(4, byteorder='big'))
-        buffer.extend(data)
-        return bytes(buffer)
 
     @staticmethod
     def get_join_transaction(ip: str, nonce: int, chain_id: int) -> bytes:
@@ -454,3 +352,106 @@ class TransactionBuilder:
         buffer += proposal_hash_bytes
         buffer += struct.pack('>B', vote)
         return buffer
+    
+    # Falcon transaction bytes
+    @staticmethod
+    def get_falcon_set_public_key_transaction(public_key, nonce, chain_id, address, fee_per_byte):
+        if nonce < 0:
+            raise ValueError("Nonce cannot be negative")
+
+        txn_base = TransactionBuilder.get_falcon_transaction_base(1001, nonce, chain_id, address, fee_per_byte)
+
+        buffer = bytearray()
+        buffer.extend(txn_base)
+        buffer.extend(len(public_key).to_bytes(2, byteorder='big'))
+        buffer.extend(public_key)
+        return bytes(buffer)
+    
+    @staticmethod
+    def get_falcon_join_as_validator_transaction(ip: str, nonce, chain_id, address, fee_per_byte):
+        if nonce < 0:
+            raise ValueError("Nonce cannot be negative")
+
+        txn_base = TransactionBuilder.get_falcon_transaction_base(1002, nonce, chain_id, address, fee_per_byte)
+        ip_bytes = ip.encode("utf-8")
+    
+        buffer = bytearray()
+        buffer.extend(txn_base)
+        buffer.extend(len(ip_bytes).to_bytes(2, byteorder='big'))
+        buffer.extend(ip_bytes)
+        return bytes(buffer)
+    
+    @staticmethod
+    def get_falcon_delegate_transaction(validator: str, pwr_amount, nonce, chain_id, address, fee_per_byte):
+        TransactionBuilder.asset_address_validity(validator)
+        if nonce < 0:
+            raise ValueError("Nonce cannot be negative")
+        
+        if len(validator) == 42:
+            validator = validator[2:]
+
+        txn_base = TransactionBuilder.get_falcon_transaction_base(1003, nonce, chain_id, address, fee_per_byte)
+    
+        buffer = bytearray()
+        buffer.extend(txn_base)
+        buffer.extend(bytes.fromhex(validator))
+        buffer.extend(pwr_amount.to_bytes(8, byteorder='big'))
+        return bytes(buffer)
+    
+    @staticmethod
+    def get_falcon_change_ip_transaction(new_ip: str, nonce, chain_id, address, fee_per_byte):
+        if nonce < 0:
+            raise ValueError("Nonce cannot be negative")
+
+        txn_base = TransactionBuilder.get_falcon_transaction_base(1004, nonce, chain_id, address, fee_per_byte)
+        new_ip_bytes = new_ip.encode("utf-8")
+    
+        buffer = bytearray()
+        buffer.extend(txn_base)
+        buffer.extend(len(new_ip_bytes).to_bytes(2, byteorder='big'))
+        buffer.extend(new_ip_bytes)
+        return bytes(buffer)
+    
+    @staticmethod
+    def get_falcon_claim_active_node_spot_transaction(nonce, chain_id, address, fee_per_byte):
+        if nonce < 0:
+            raise ValueError("Nonce cannot be negative")
+
+        txn_base = TransactionBuilder.get_falcon_transaction_base(1005, nonce, chain_id, address, fee_per_byte)
+    
+        buffer = bytearray()
+        buffer.extend(txn_base)
+        return bytes(buffer)
+    
+    @staticmethod
+    def get_falcon_transfer_pwr_transaction(to: str, amount, nonce, chain_id, address, fee_per_byte):
+        TransactionBuilder.asset_address_validity(to)
+        if amount < 0:
+            raise ValueError("Amount cannot be negative")
+        if nonce < 0:
+            raise ValueError("Nonce cannot be negative")
+
+        if len(to) == 42:
+            to = to[2:]
+
+        txn_base = TransactionBuilder.get_falcon_transaction_base(1006, nonce, chain_id, address, fee_per_byte)
+
+        buffer = bytearray()
+        buffer.extend(txn_base)
+        buffer.extend(bytes.fromhex(to))
+        buffer.extend(amount.to_bytes(8, byteorder='big'))
+        return bytes(buffer)
+    
+    @staticmethod
+    def get_falcon_vm_data_transaction(vm_id: int, data: bytes, nonce, chain_id, address, fee_per_byte):
+        if nonce < 0:
+            raise ValueError("Nonce cannot be negative")
+
+        txn_base = TransactionBuilder.get_falcon_transaction_base(1007, nonce, chain_id, address, fee_per_byte)
+    
+        buffer = bytearray()
+        buffer.extend(txn_base)
+        buffer.extend(vm_id.to_bytes(8, byteorder='big'))
+        buffer.extend(len(data).to_bytes(4, byteorder='big'))
+        buffer.extend(data)
+        return bytes(buffer)
