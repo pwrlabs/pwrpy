@@ -1,15 +1,16 @@
-import hashlib
 import json
 import requests
+from eth_hash.auto import keccak
 from requests.exceptions import Timeout, RequestException
 from binascii import hexlify
+from typing import Callable
 
 from pwrpy.models.Transaction import Transaction, GuardianApprovalTransaction
 from pwrpy.models.Transaction import VmDataTransaction
 from pwrpy.models.Block import Block
 from pwrpy.models.Validator import Validator
 from pwrpy.models.Response import ApiResponse, TransactionForGuardianApproval, EarlyWithdrawPenaltyResponse
-
+from pwrpy.models.TxSubscription import VidaTransactionSubscription
 
 def get_response(url: str, timeout):
     """
@@ -48,7 +49,6 @@ class PWRPY:
     def __init__(self):
         self.__rpc_node_url = "https://pwrrpc.pwrlabs.io/"
         self.__chainId = b'-1'  # The chain ID is set to -1 until fetched from the rpc_node_url
-        self.__fee_per_byte = 0
 
     def get_chainId(self):
         if self.__chainId == b'-1':
@@ -64,13 +64,11 @@ class PWRPY:
         self.__rpc_node_url = url
 
     def get_fee_per_byte(self):
-        if self.__fee_per_byte == 0:
-            url = self.__rpc_node_url + "/feePerByte/"
-            response = get_response(url, self.timeout)
-            data = response.json()
-            fee = data.get('feePerByte')
-            self.__fee_per_byte = fee
-            return fee
+        url = self.get_rpc_node_url() + "/feePerByte/"
+        response = get_response(url, self.timeout)
+        data = response.json()
+        fee = data.get('feePerByte')
+        return fee
 
     def get_blockchain_version(self):
         url = f"{self.__rpc_node_url}/blockchainVersion/"
@@ -94,11 +92,10 @@ class PWRPY:
             response = requests.post(url, json=data, headers=headers, timeout=(self.connection_timeout, self.so_timeout))
 
             if response.status_code == 200:
-                txnHash = "0x" + hashlib.sha3_256(txn).hexdigest()
+                txnHash = "0x" + keccak(txn).hex()
                 return ApiResponse(True, None, bytes.fromhex(txnHash[2:]))
             elif response.status_code == 400:
                 error_message = json.loads(response.text)["message"]
-                print("broadcast response:", response.text)
                 return ApiResponse(False, error_message, None)
             else:
                 raise RuntimeError("Failed with HTTP error code: " + str(response.status_code))
@@ -301,21 +298,6 @@ class PWRPY:
                     return data["owner"]
                 else:
                     return None
-            else:
-                return response.get("message")
-
-        except Exception as e:
-            return str(e)
-
-    def update_fee_per_byte(self):
-        try:
-            url = f"{self.get_rpc_node_url()}/feePerByte/"
-            response = get_response(url, self.timeout)
-
-            if response.status_code == 200:
-                data = response.json()
-                self.__fee_per_byte = data["feePerByte"]
-                return self.__fee_per_byte
             else:
                 return response.get("message")
 
@@ -766,3 +748,21 @@ class PWRPY:
         penalties = {int(k): v for k, v in penalties_obj.items()}
 
         return penalties
+    
+    def subscribe_to_vida_transactions(
+        self,
+        vida_id: int,
+        starting_block: int,
+        handler: Callable[[VmDataTransaction], None],
+        poll_interval: int = 100
+    ) -> VidaTransactionSubscription:
+        subscription = VidaTransactionSubscription(
+            rpc=self,
+            vida_id=vida_id,
+            starting_block=starting_block,
+            handler=handler,
+            poll_interval=poll_interval
+        )
+        subscription.start()
+        return subscription
+    

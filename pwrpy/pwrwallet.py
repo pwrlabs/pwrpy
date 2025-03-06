@@ -42,18 +42,10 @@ class PWRWallet:
             return None
         signature = Signature.sign_message(private_key=self.get_private_key(),
                                            message=transaction)
-        # Create a byte buffer for the final transaction
-        final_txn = bytearray(len(transaction) + 65)
-
-        # Copy the original transaction and signature to the final transaction buffer
-        final_txn[:len(transaction)] = transaction
-        final_txn[len(transaction):] = signature
+        final_txn = bytearray(transaction)
+        final_txn.extend(signature)
 
         return bytes(final_txn)
-
-    def get_signed_transfer_pwr_transaction(self, to, amount, nonce):
-        return self.get_signed_transaction(
-            TransactionBuilder.get_transfer_pwr_transaction(to, amount, nonce, self.pwrpy.get_chainId()))
 
     def store_wallet(self, path: str, password: str) -> None:
         try:
@@ -84,101 +76,80 @@ class PWRWallet:
     def transfer_pwr(self, to, amount, nonce = None):
         if nonce is None:
             nonce = self.get_nonce()
-        return self.pwrpy.broadcast_transaction(self.get_signed_transfer_pwr_transaction(to, amount, nonce))
-
-    def get_signed_join_transaction(self, ip, nonce):
-        return self.get_signed_transaction(
-            TransactionBuilder.get_join_transaction(ip, nonce, self.pwrpy.get_chainId()))
+        tx = TransactionBuilder.get_transfer_pwr_transaction(to, amount, nonce, self.pwrpy.get_chainId())
+        signature = self.get_signed_transaction(tx)
+        return self.pwrpy.broadcast_transaction(signature)
 
     def join(self, ip, nonce = None):
         if nonce is None:
             nonce = self.get_nonce()
-        return self.pwrpy.broadcast_transaction(self.get_signed_join_transaction(ip, nonce))
-
-    def get_signed_claim_active_node_spot_transaction(self, nonce):
-        return self.get_signed_transaction(
-            TransactionBuilder.get_claim_active_node_spot_transaction(nonce, self.pwrpy.get_chainId()))
+        tx = TransactionBuilder.get_join_transaction(ip, nonce, self.pwrpy.get_chainId())
+        signature = self.get_signed_transaction(tx)
+        return self.pwrpy.broadcast_transaction(signature)
 
     def claim_active_node_spot(self, nonce = None):
         if nonce is None:
             nonce = self.get_nonce()
-        return self.pwrpy.broadcast_transaction(self.get_signed_claim_active_node_spot_transaction(nonce))
-
-    def get_signed_delegate_transaction(self, validator, amount, nonce):
-        return self.get_signed_transaction(
-            TransactionBuilder.get_delegate_transaction(validator, amount, nonce, self.pwrpy.get_chainId()))
+        tx = TransactionBuilder.get_claim_active_node_spot_transaction(nonce, self.pwrpy.get_chainId())
+        signature = self.get_signed_transaction(tx)
+        return self.pwrpy.broadcast_transaction(signature)
 
     def delegate(self, validator, amount, nonce = None):
         if nonce is None:
             nonce = self.get_nonce()
-        return self.pwrpy.broadcast_transaction(self.get_signed_delegate_transaction(validator, amount, nonce))
-
-    def get_signed_withdraw_transaction(self, validator, shares_amount, nonce):
-        return self.get_signed_transaction(
-            TransactionBuilder.get_withdraw_transaction(validator, shares_amount, nonce, self.pwrpy.get_chainId()))
+        tx = TransactionBuilder.get_delegate_transaction(validator, amount, nonce, self.pwrpy.get_chainId())
+        signature = self.get_signed_transaction(tx)
+        return self.pwrpy.broadcast_transaction(signature)
 
     def withdraw(self, validator, shares_amount, nonce = None):
         if nonce is None:
             nonce = self.get_nonce()
-        return self.pwrpy.broadcast_transaction(
-            self.get_signed_withdraw_transaction(validator, shares_amount, nonce))
-
-    def get_signed_vm_data_transaction(self, vm_id, data, nonce):
-        return self.get_signed_transaction(
-            TransactionBuilder.get_vm_data_transaction(vm_id, data, nonce, self.pwrpy.get_chainId()))
+        tx = TransactionBuilder.get_withdraw_transaction(validator, shares_amount, nonce, self.pwrpy.get_chainId())
+        signature = self.get_signed_transaction(tx)
+        return self.pwrpy.broadcast_transaction(signature)
 
     def send_vm_data_transaction(self, vm_id, data, nonce = None):
         if nonce is None:
             nonce = self.get_nonce()
-        return self.pwrpy.broadcast_transaction(self.get_signed_vm_data_transaction(vm_id, data, nonce))
-
-    def get_signed_claim_vm_id_transaction(self, vm_id, nonce):
-        return self.get_signed_transaction(
-            TransactionBuilder.get_claim_vm_id_transaction(vm_id, nonce, self.pwrpy.get_chainId()))
+        tx = TransactionBuilder.get_vm_data_transaction(vm_id, data, nonce, self.pwrpy.get_chainId())
+        signature = self.get_signed_transaction(tx)
+        return self.pwrpy.broadcast_transaction(signature)
 
     def claim_vm_id(self, vm_id, nonce = None):
         if nonce is None:
             nonce = self.get_nonce()
-        return self.pwrpy.broadcast_transaction(self.get_signed_claim_vm_id_transaction(vm_id, nonce))
-
-    def get_signed_set_guardian_transaction(self, guardian, expiry_date, nonce):
-        return self.get_signed_transaction(
-            TransactionBuilder.get_set_guardian_transaction(guardian, expiry_date, nonce, self.pwrpy.get_chainId()))
+        tx = TransactionBuilder.get_claim_vm_id_transaction(vm_id, nonce, self.pwrpy.get_chainId())
+        signature = self.get_signed_transaction(tx)
+        return self.pwrpy.broadcast_transaction(signature)
 
     def set_guardian(self, guardian, expiry_date, nonce = None):
         if nonce is None:
             nonce = self.get_nonce()
-        return self.pwrpy.broadcast_transaction(
-            self.get_signed_set_guardian_transaction(guardian, expiry_date, nonce))
-
-    def get_signed_remove_guardian_transaction(self, nonce):
-        return self.get_signed_transaction(
-            TransactionBuilder.get_remove_guardian_transaction(nonce, self.pwrpy.get_chainId()))
+        tx = TransactionBuilder.get_set_guardian_transaction(guardian, expiry_date, nonce, self.pwrpy.get_chainId())
+        signature = self.get_signed_transaction(tx)
+        return self.pwrpy.broadcast_transaction(signature)
 
     def remove_guardian(self, nonce = None):
         if nonce is None:
             nonce = self.get_nonce()
-        return self.pwrpy.broadcast_transaction(self.get_signed_remove_guardian_transaction(nonce))
-
-    def get_signed_guardian_approval_transaction(self, transactions, nonce):
-        return self.get_signed_transaction(
-            TransactionBuilder.get_guardian_approval_transaction(transactions, nonce, self.pwrpy.get_chainId()))
+        tx = TransactionBuilder.get_remove_guardian_transaction(nonce, self.pwrpy.get_chainId())
+        signature = self.get_signed_transaction(tx)
+        return self.pwrpy.broadcast_transaction(signature)
 
     def send_guardian_approval_transaction(self, transactions, nonce = None):
         if nonce is None:
             nonce = self.get_nonce()
-        return self.pwrpy.broadcast_transaction(self.get_signed_guardian_approval_transaction(transactions, nonce))
-
-    def get_signed_payable_vm_data_transaction(self, vm_id, value, data, nonce):
-        return self.get_signed_transaction(
-            TransactionBuilder.get_payable_vm_data_transaction(vm_id, value, data, nonce, self.pwrpy.get_chainId()))
+        tx = TransactionBuilder.get_guardian_approval_transaction(transactions, nonce, self.pwrpy.get_chainId())
+        signature = self.get_signed_transaction(tx)
+        return self.pwrpy.broadcast_transaction(signature)
 
     def send_payable_vm_data_transaction(self, vm_id, value, data, nonce = None):
         if nonce is None:
             nonce = self.get_nonce()
+        tx = TransactionBuilder.get_payable_vm_data_transaction(vm_id, value, data, nonce, self.pwrpy.get_chainId())
+        signature = self.get_signed_transaction(tx)
         try:
-            return self.pwrpy.broadcast_transaction(
-                self.get_signed_payable_vm_data_transaction(vm_id, value, data, nonce))
+            return self.pwrpy.broadcast_transaction(signature)
         except Exception as e:
             return ApiResponse(success=False, data=None, message=str(e))
 
