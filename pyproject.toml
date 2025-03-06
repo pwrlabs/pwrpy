@@ -19,6 +19,7 @@ eth-account = "^0.13.3"
 coincurve = "^20.0.0"
 ecdsa = "^0.19.0"
 python-dotenv = "^1.0.0"
+cryptography = "^44.0.2"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.2.2"
