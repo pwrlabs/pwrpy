@@ -1,11 +1,10 @@
 from pwrpy.pwrsdk import PWRPY
 from pwrpy.models.Transaction import VmDataTransaction
 import json
-import time
 
 rpc = PWRPY()
 
-vida_id = 1234
+vida_id = 1
 starting_block = rpc.get_latest_block_number()
 
 def handle_transaction(txn: VmDataTransaction):
@@ -21,12 +20,8 @@ def handle_transaction(txn: VmDataTransaction):
     except Exception as e:
         print(f"Error processing transaction: {e}")
 
-vidaTxs = rpc.subscribe_to_vida_transactions(vida_id, starting_block, handler=handle_transaction)
-print(vidaTxs.get_vida_id())
-
-try:
-    while True:
-        time.sleep(1)
-except KeyboardInterrupt:
-    print("\nStopping subscription...")
-    vidaTxs.stop()
+subscription = rpc.subscribe_to_vida_transactions(vida_id, starting_block, handler=handle_transaction)
+subscription.pause()
+subscription.resume()
+# subscription.stop()
+print(f"Latest checked block: {subscription.get_latest_checked_block()}")
