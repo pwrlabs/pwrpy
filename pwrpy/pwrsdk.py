@@ -10,7 +10,7 @@ from pwrpy.models.Transaction import VmDataTransaction
 from pwrpy.models.Block import Block
 from pwrpy.models.Validator import Validator
 from pwrpy.models.Response import ApiResponse, TransactionForGuardianApproval, EarlyWithdrawPenaltyResponse
-from pwrpy.models.TxSubscription import VidaTransactionSubscription
+from pwrpy.models.VIDA import VidaTransactionSubscription
 
 def get_response(url: str, timeout):
     """
