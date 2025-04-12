@@ -3,17 +3,17 @@
 from pwrpy.pwrsdk import PWRPY
 from pwrpy.pwrwallet import PWRWallet
 
-sdk = PWRPY()
+sdk = PWRPY("https://pwrrpc.pwrlabs.io/")
 GREEN = "\033[92m"
 RESET = "\033[0m"
 ORANGE = "\033[93m"
 
 user_private_key = "0x98d47170a862d357016d4b4e9ddb0fa21cf779a3e10d73772046439ea25b78c6"
 guardian_private_key = format(19025338099182849188500822369817708178555441129124871592504836170414925188851, 'x')
-User = PWRWallet(pwrpy=PWRPY(), private_key=user_private_key)
+User = PWRWallet(pwrpy=PWRPY("https://pwrrpc.pwrlabs.io/"), private_key=user_private_key)
 User.get_address()
 
-Guardian = PWRWallet(pwrpy=PWRPY(), private_key=guardian_private_key)
+Guardian = PWRWallet(pwrpy=PWRPY("https://pwrrpc.pwrlabs.io/"), private_key=guardian_private_key)
 
 vmId = 897435
 vm_address = sdk.get_vm_id_address(vmId)

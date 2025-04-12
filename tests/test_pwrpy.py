@@ -1,7 +1,7 @@
 ### Tests for the PWRPY API SDK functions
 from pwrpy.pwrsdk import PWRPY
 
-sdk = PWRPY()
+sdk = PWRPY("https://pwrrpc.pwrlabs.io/")
 address = "0xf6fe6a14b3aac06c2c102cf5f028df35157f9770"
 
 GREEN = "\033[92m"

@@ -46,12 +46,14 @@ class PWRPY:
     connection_timeout = 20
     timeout = (connection_timeout, so_timeout)
 
-    def __init__(self):
-        self.__rpc_node_url = "https://pwrrpc.pwrlabs.io/"
-        self.__chainId = b'-1'  # The chain ID is set to -1 until fetched from the rpc_node_url
+    def __init__(self, rpc_node_url: str = None):
+        if rpc_node_url is None:
+            raise ValueError("RPC node URL cannot be None")
+        self.__rpc_node_url = rpc_node_url
+        self.__chainId = b'0'  # The chain ID is set to 0 until fetched from the rpc_node_url
 
     def get_chainId(self):
-        if self.__chainId == b'-1':
+        if self.__chainId == b'0':
             url = self.__rpc_node_url + "/chainId/"
             response = get_response(url, self.timeout)
             chainID = response.json()["chainId"].to_bytes(1, byteorder='big')
