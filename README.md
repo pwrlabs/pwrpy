@@ -35,7 +35,7 @@ pip3 install pwrpy
 
 ## 🌐 Documentation
 
-How to [Guides](https://pwrlabs.io) 🔜 & [API](https://pwrlabs.io) 💻
+How to [Guides](https://docs.pwrlabs.io/pwrchain/overview) 🔜 & [API](https://docs.pwrlabs.io/developers/sdks/overview) 💻
 
 Play with [Code Examples](https://github.com/keep-pwr-strong/pwr-examples/) 🎮
 
@@ -52,7 +52,7 @@ from pwrpy.pwrwallet import PWRWallet
 
 ```python
 private_key = "0xac0974bec...f80"
-pwr = PWRPY()
+pwr = PWRPY("https://pwrrpc.pwrlabs.io/")
 wallet = PWRWallet(private_key)
 ```
 
@@ -165,6 +165,6 @@ You can also join our dedicated channel for [pwrpy](https://discord.com/channels
 
 ## 📜 License
 
-Copyright (c) 2024 PWR Labs
+Copyright (c) 2025 PWR Labs
 
 Licensed under the [MIT license](https://github.com/pwrlabs/pwrpy/blob/main/LICENSE).

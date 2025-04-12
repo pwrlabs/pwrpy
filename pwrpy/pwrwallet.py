@@ -21,7 +21,7 @@ class PWRWallet:
             raise ValueError("Invalid private key format")
 
         if pwrpy is None:
-            self.pwrpy = PWRPY()
+            self.pwrpy = PWRPY("https://pwrrpc.pwrlabs.io/")
         else:
             self.pwrpy = pwrpy
 

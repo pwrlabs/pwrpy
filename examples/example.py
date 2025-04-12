@@ -2,8 +2,9 @@ from pwrpy.pwrsdk import PWRPY
 from pwrpy.pwrwallet import PWRWallet
 
 private_key = "0x04828e90065864c111871769c601d7de2246570b39dd37c19ccac16c14b18f72"
-pwr = PWRPY()
-PWRWallet(private_key).store_wallet("my_wallet.dat", "1234")
+pwr = PWRPY("https://pwrrpc.pwrlabs.io/")
+
+PWRWallet(private_key, pwr).store_wallet("my_wallet.dat", "1234")
 wallet = PWRWallet.load_wallet("my_wallet.dat", "1234")
 
 GREEN = "\033[92m"
