@@ -77,27 +77,27 @@ pk = wallet.get_private_key()
 **Transfer PWR tokens:**
 
 ```python
-transfer = wallet.transfer_pwr("recipientAddress", 100000)
+response = wallet.transfer_pwr("recipientAddress", 100000)
 ```
 
 Sending a transcation to the PWR Chain returns a Response object, which specified if the transaction was a success, and returns relevant data.
 If the transaction was a success, you can retrieive the transaction hash, if it failed, you can fetch the error.
 
 ```python
-transfer = wallet.transfer_pwr("recipientAddress", 100000)
-if transfer.success:
-    print("Transfer:", transfer.__dict__)
+response = wallet.transfer_pwr("recipientAddress", 100000)
+if response.success:
+    print("Transfer:", response.__dict__)
 else:
     print("FAILED!")
 ```
 
-**Send data to a VM:**
+**Send data to a VIDA:**
 
 ```python
 data = "Hello World!"
-sendVmData = wallet.send_vm_data_transaction(123, data.encode())
-if sendVmData.success:
-    print("SendVmData:", sendVmData.__dict__)
+response = wallet.send_vida_data(123, data.encode())
+if response.success:
+    print("SendVidaData:", response.__dict__)
 else:
     print("FAILED!")
 ```
@@ -136,14 +136,14 @@ Gets the nonce/transaction count of a specific address.
 nonce = pwr.get_nonce_of_address('0x...')
 ```
 
-**Get VM Data:**
+**Get VIDA Data:**
 
 ```python
 start_block = 843500
 end_block = 843750
-vm_id = 123
+vida_id = 123
 
-transactions = pwr.get_vm_data_txns(start_block, end_block, vm_id)
+transactions = pwr.get_vida_data_txns(start_block, end_block, vida_id)
 for txs in transactions:
     print("Data:", txs.data)
 ```

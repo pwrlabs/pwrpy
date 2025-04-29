@@ -1,327 +1,783 @@
-import eth_account
-from pwrpy.signer import Signature
+import struct
+from typing import Union, List
+from pathlib import Path
+import sha3
+from pwrpy.Utils.Falcon import Falcon
 from pwrpy.TransactionBuilder import TransactionBuilder
 from pwrpy.pwrsdk import PWRPY
-from pwrpy.models.Response import ApiResponse
-from pwrpy.Utils.AES256 import AES256
+from Crypto.Hash import keccak
 
-class PWRWallet:
-    def __init__(self, private_key=None, pwrpy: PWRPY = None):
-        if private_key is None:
-            self.private_key = int.from_bytes(eth_account.Account.create().key, 'big')
-        elif isinstance(private_key, str):
-            if private_key.startswith("0x"):
-                private_key = private_key[2:]
-            self.private_key = int(private_key, 16)
-        elif isinstance(private_key, bytes):
-            self.private_key = int.from_bytes(private_key, 'big')
-        elif isinstance(private_key, int):
-            self.private_key = private_key
-        else:
-            raise ValueError("Invalid private key format")
+class Wallet:
+    def __init__(
+            self,
+            public_key: bytes = None,
+            private_key: bytes = None,
+            address: bytes = None,
+            pwrpy: PWRPY = None
+        ):
+        self.public_key = public_key
+        self.private_key = private_key
+        self.address = address
 
         if pwrpy is None:
             self.pwrpy = PWRPY("https://pwrrpc.pwrlabs.io/")
         else:
             self.pwrpy = pwrpy
 
-    def get_address(self):
-        return eth_account.Account.from_key(self.private_key).address
+    @classmethod
+    def new(cls, pwrpy: PWRPY = PWRPY("https://pwrrpc.pwrlabs.io/")) -> 'Wallet':
+        # Assuming Falcon class exists in Python
+        public_key, private_key = Falcon.generate_keypair_512()
+        
+        # Get the hash of the public key
+        hash_bytes = cls.__hash224(public_key)
+        address = hash_bytes[:20]
 
+        return cls(
+            public_key=public_key,
+            private_key=private_key,
+            address=address,
+            pwrpy=pwrpy
+        )
+
+    @classmethod
+    def from_keys(cls, public_key: bytes, private_key: bytes, pwrpy: PWRPY = PWRPY("https://pwrrpc.pwrlabs.io/")) -> 'Wallet':
+        # Get the hash of the public key
+        hash_bytes = cls.__hash224(public_key)
+        address = hash_bytes[:20]
+
+        return cls(
+            public_key=public_key,
+            private_key=private_key,
+            address=address,
+            pwrpy=pwrpy
+        )
+
+    def store_wallet(self, file_path: Union[str, Path]) -> None:
+        buffer = bytearray()
+
+        # Add public key length and data
+        buffer.extend(struct.pack('>I', len(self.public_key)))
+        buffer.extend(self.public_key)
+        
+        # Add private key length and data
+        buffer.extend(struct.pack('>I', len(self.private_key)))
+        buffer.extend(self.private_key)
+    
+        with open(file_path, 'wb') as f:
+            f.write(buffer)
+    
+    @classmethod
+    def load_wallet(cls, file_path: Union[str, Path], pwrpy: PWRPY = PWRPY("https://pwrrpc.pwrlabs.io/")) -> 'Wallet':
+        with open(file_path, 'rb') as f:
+            data = f.read()
+        
+        if len(data) < 8:  # At minimum we need two 4-byte length fields
+            raise ValueError(f"File too small: {len(data)} bytes")
+    
+        cursor = 0
+        
+        # Read public key length
+        pub_length = struct.unpack('>I', data[cursor:cursor+4])[0]
+        cursor += 4
+        
+        if pub_length == 0 or pub_length > 2048:
+            raise ValueError(f"Invalid public key length: {pub_length}")
+        
+        if cursor + pub_length > len(data):
+            raise ValueError(f"File too small for public key of length {pub_length}")
+        
+        # Read public key
+        public_key_bytes = data[cursor:cursor+pub_length]
+        cursor += pub_length
+        
+        if cursor + 4 > len(data):
+            raise ValueError("File too small for private key length")
+        
+        # Read private key length
+        sec_length = struct.unpack('>I', data[cursor:cursor+4])[0]
+        cursor += 4
+        
+        if sec_length == 0 or sec_length > 4096:
+            raise ValueError(f"Invalid private key length: {sec_length}")
+        
+        if cursor + sec_length > len(data):
+            raise ValueError(f"File too small for private key of length {sec_length}")
+        
+        # Read private key
+        private_key_bytes = data[cursor:cursor+sec_length]
+        
+        try:
+            public_key = public_key_bytes
+        except Exception as e:
+            raise ValueError(f"Failed to parse public key: {e}")
+        
+        try:
+            private_key = private_key_bytes
+        except Exception as e:
+            raise ValueError(f"Failed to parse private key: {e}")
+        
+        return cls.from_keys(public_key, private_key, pwrpy)
+    
+    def sign(self, message: bytes) -> bytes:
+        signature = Falcon.sign_512(message, self.private_key)
+        return signature
+    
+    def verify(self, message: bytes, signature: bytes) -> bool:
+        verified = Falcon.verify_512(message, signature, self.public_key)
+        return verified
+
+    def get_address(self) -> str:
+        return f"0x{self.address.hex()}"
+
+    def get_public_key(self) -> bytes:
+        return self.public_key
+
+    def get_private_key(self) -> bytes:
+        return self.private_key
+    
     def get_balance(self):
         return self.pwrpy.get_balance_of_address(self.get_address())
 
     def get_nonce(self):
         return self.pwrpy.get_nonce_of_address(self.get_address())
+    
+    def set_public_key(self, public_key: bytes, fee_per_byte = None, nonce = None):
+        if nonce is None:
+            nonce = self.get_nonce()
+        if fee_per_byte is None:
+            fee_per_byte = self.pwrpy.get_fee_per_byte()
 
-    def get_private_key(self):
-        return self.private_key
+        tx = TransactionBuilder.get_set_public_key_transaction(
+            public_key, nonce, self.pwrpy.get_chainId(), self.get_address(), fee_per_byte
+        )
+        signature = self.get_signed_transaction(tx)
+        return self.pwrpy.broadcast_transaction(signature)
+    
+    def join_as_validator(self, ip: str, fee_per_byte = None, nonce = None):
+        response = self.__make_sure_public_key_is_set(fee_per_byte)
+        if response != None and response.success == False: return response
 
-    def get_signed_transaction(self, transaction):
+        if nonce is None:
+            nonce = self.get_nonce()
+        if fee_per_byte is None:
+            fee_per_byte = self.pwrpy.get_fee_per_byte()
+
+        tx = TransactionBuilder.get_join_as_validator_transaction(
+            ip, nonce, self.pwrpy.get_chainId(), self.get_address(), fee_per_byte
+        )
+        signature = self.get_signed_transaction(tx)
+        return self.pwrpy.broadcast_transaction(signature)
+    
+    def delegate(self, validator: str, pwr_amount, fee_per_byte = None, nonce = None):
+        response = self.__make_sure_public_key_is_set(fee_per_byte)
+        if response != None and response.success == False: return response
+
+        if nonce is None:
+            nonce = self.get_nonce()
+        if fee_per_byte is None:
+            fee_per_byte = self.pwrpy.get_fee_per_byte()
+
+        tx = TransactionBuilder.get_delegate_transaction(
+            validator, pwr_amount, nonce, self.pwrpy.get_chainId(), self.get_address(), fee_per_byte
+        )
+        signature = self.get_signed_transaction(tx)
+        return self.pwrpy.broadcast_transaction(signature)
+
+    def propose_change_ip(self, new_ip: str, fee_per_byte = None, nonce = None):
+        response = self.__make_sure_public_key_is_set(fee_per_byte)
+        if response != None and response.success == False: return response
+
+        if nonce is None:
+            nonce = self.get_nonce()
+        if fee_per_byte is None:
+            fee_per_byte = self.pwrpy.get_fee_per_byte()
+
+        tx = TransactionBuilder.get_change_ip_transaction(
+            new_ip, nonce, self.pwrpy.get_chainId(), self.get_address(), fee_per_byte
+        )
+        signature = self.get_signed_transaction(tx)
+        return self.pwrpy.broadcast_transaction(signature)
+    
+    def claim_active_node_spot(self, fee_per_byte = None, nonce = None):
+        response = self.__make_sure_public_key_is_set(fee_per_byte)
+        if response != None and response.success == False: return response
+
+        if nonce is None:
+            nonce = self.get_nonce()
+        if fee_per_byte is None:
+            fee_per_byte = self.pwrpy.get_fee_per_byte()
+
+        tx = TransactionBuilder.get_claim_active_node_spot_transaction(
+            nonce, self.pwrpy.get_chainId(), self.get_address(), fee_per_byte
+        )
+        signature = self.get_signed_transaction(tx)
+        return self.pwrpy.broadcast_transaction(signature)
+
+    def transfer_pwr(self, to, amount, fee_per_byte = None, nonce = None):
+        response = self.__make_sure_public_key_is_set(fee_per_byte)
+        if response != None and response.success == False: return response
+
+        if nonce is None:
+            nonce = self.get_nonce()
+        if fee_per_byte is None:
+            fee_per_byte = self.pwrpy.get_fee_per_byte()
+
+        tx = TransactionBuilder.get_transfer_pwr_transaction(
+            to, amount, nonce, self.pwrpy.get_chainId(), self.get_address(), fee_per_byte
+        )
+        signature = self.get_signed_transaction(tx)
+        return self.pwrpy.broadcast_transaction(signature)
+    
+    # Governance Proposal Transactions
+    def propose_change_early_withdraw_penalty(self, title: str, description: str, early_withdrawal_time: int, 
+                                             withdrawal_penalty: int, fee_per_byte = None, nonce = None):
+        response = self.__make_sure_public_key_is_set(fee_per_byte)
+        if response != None and response.success == False: return response
+
+        if nonce is None:
+            nonce = self.get_nonce()
+        if fee_per_byte is None:
+            fee_per_byte = self.pwrpy.get_fee_per_byte()
+
+        tx = TransactionBuilder.get_change_early_withdraw_penalty_proposal_transaction(
+            title, description, early_withdrawal_time, withdrawal_penalty, nonce, 
+            self.pwrpy.get_chainId(), self.get_address(), fee_per_byte
+        )
+        signature = self.get_signed_transaction(tx)
+        return self.pwrpy.broadcast_transaction(signature)
+
+    def propose_change_fee_per_byte(self, title: str, description: str, new_fee_per_byte: int, 
+                                   fee_per_byte = None, nonce = None):
+        response = self.__make_sure_public_key_is_set(fee_per_byte)
+        if response != None and response.success == False: return response
+
+        if nonce is None:
+            nonce = self.get_nonce()
+        if fee_per_byte is None:
+            fee_per_byte = self.pwrpy.get_fee_per_byte()
+
+        tx = TransactionBuilder.get_change_fee_per_byte_proposal_transaction(
+            title, description, new_fee_per_byte, nonce, self.pwrpy.get_chainId(), 
+            self.get_address(), fee_per_byte
+        )
+        signature = self.get_signed_transaction(tx)
+        return self.pwrpy.broadcast_transaction(signature)
+
+    def propose_change_max_block_size(self, title: str, description: str, max_block_size: int, 
+                                     fee_per_byte = None, nonce = None):
+        response = self.__make_sure_public_key_is_set(fee_per_byte)
+        if response != None and response.success == False: return response
+
+        if nonce is None:
+            nonce = self.get_nonce()
+        if fee_per_byte is None:
+            fee_per_byte = self.pwrpy.get_fee_per_byte()
+
+        tx = TransactionBuilder.get_change_max_block_size_proposal_transaction(
+            title, description, max_block_size, nonce, self.pwrpy.get_chainId(), 
+            self.get_address(), fee_per_byte
+        )
+        signature = self.get_signed_transaction(tx)
+        return self.pwrpy.broadcast_transaction(signature)
+
+    def propose_change_max_txn_size(self, title: str, description: str, max_txn_size: int, 
+                                   fee_per_byte = None, nonce = None):
+        response = self.__make_sure_public_key_is_set(fee_per_byte)
+        if response != None and response.success == False: return response
+
+        if nonce is None:
+            nonce = self.get_nonce()
+        if fee_per_byte is None:
+            fee_per_byte = self.pwrpy.get_fee_per_byte()
+
+        tx = TransactionBuilder.get_change_max_txn_size_proposal_transaction(
+            title, description, max_txn_size, nonce, self.pwrpy.get_chainId(), 
+            self.get_address(), fee_per_byte
+        )
+        signature = self.get_signed_transaction(tx)
+        return self.pwrpy.broadcast_transaction(signature)
+
+    def propose_change_overall_burn_percentage(self, title: str, description: str, burn_percentage: int, 
+                                              fee_per_byte = None, nonce = None):
+        response = self.__make_sure_public_key_is_set(fee_per_byte)
+        if response != None and response.success == False: return response
+
+        if nonce is None:
+            nonce = self.get_nonce()
+        if fee_per_byte is None:
+            fee_per_byte = self.pwrpy.get_fee_per_byte()
+
+        tx = TransactionBuilder.get_change_overall_burn_percentage_proposal_transaction(
+            title, description, burn_percentage, nonce, self.pwrpy.get_chainId(), 
+            self.get_address(), fee_per_byte
+        )
+        signature = self.get_signed_transaction(tx)
+        return self.pwrpy.broadcast_transaction(signature)
+
+    def propose_change_reward_per_year(self, title: str, description: str, reward_per_year: int, 
+                                      fee_per_byte = None, nonce = None):
+        response = self.__make_sure_public_key_is_set(fee_per_byte)
+        if response != None and response.success == False: return response
+
+        if nonce is None:
+            nonce = self.get_nonce()
+        if fee_per_byte is None:
+            fee_per_byte = self.pwrpy.get_fee_per_byte()
+
+        tx = TransactionBuilder.get_change_reward_per_year_proposal_transaction(
+            title, description, reward_per_year, nonce, self.pwrpy.get_chainId(), 
+            self.get_address(), fee_per_byte
+        )
+        signature = self.get_signed_transaction(tx)
+        return self.pwrpy.broadcast_transaction(signature)
+
+    def propose_change_validator_count_limit(self, title: str, description: str, validator_count_limit: int, 
+                                           fee_per_byte = None, nonce = None):
+        response = self.__make_sure_public_key_is_set(fee_per_byte)
+        if response != None and response.success == False: return response
+
+        if nonce is None:
+            nonce = self.get_nonce()
+        if fee_per_byte is None:
+            fee_per_byte = self.pwrpy.get_fee_per_byte()
+
+        tx = TransactionBuilder.get_change_validator_count_limit_proposal_transaction(
+            title, description, validator_count_limit, nonce, self.pwrpy.get_chainId(), 
+            self.get_address(), fee_per_byte
+        )
+        signature = self.get_signed_transaction(tx)
+        return self.pwrpy.broadcast_transaction(signature)
+
+    def propose_change_validator_joining_fee(self, title: str, description: str, joining_fee: int, 
+                                           fee_per_byte = None, nonce = None):
+        response = self.__make_sure_public_key_is_set(fee_per_byte)
+        if response != None and response.success == False: return response
+
+        if nonce is None:
+            nonce = self.get_nonce()
+        if fee_per_byte is None:
+            fee_per_byte = self.pwrpy.get_fee_per_byte()
+
+        tx = TransactionBuilder.get_change_validator_joining_fee_proposal_transaction(
+            title, description, joining_fee, nonce, self.pwrpy.get_chainId(), 
+            self.get_address(), fee_per_byte
+        )
+        signature = self.get_signed_transaction(tx)
+        return self.pwrpy.broadcast_transaction(signature)
+
+    def propose_change_vida_id_claiming_fee(self, title: str, description: str, vida_id_claiming_fee: int, 
+                                           fee_per_byte = None, nonce = None):
+        response = self.__make_sure_public_key_is_set(fee_per_byte)
+        if response != None and response.success == False: return response
+
+        if nonce is None:
+            nonce = self.get_nonce()
+        if fee_per_byte is None:
+            fee_per_byte = self.pwrpy.get_fee_per_byte()
+
+        tx = TransactionBuilder.get_change_vida_id_claiming_fee_proposal_transaction(
+            title, description, vida_id_claiming_fee, nonce, self.pwrpy.get_chainId(), 
+            self.get_address(), fee_per_byte
+        )
+        signature = self.get_signed_transaction(tx)
+        return self.pwrpy.broadcast_transaction(signature)
+
+    def propose_change_vida_owner_txn_fee_share(self, title: str, description: str, vida_owner_txn_fee_share: int, 
+                                             fee_per_byte = None, nonce = None):
+        response = self.__make_sure_public_key_is_set(fee_per_byte)
+        if response != None and response.success == False: return response
+
+        if nonce is None:
+            nonce = self.get_nonce()
+        if fee_per_byte is None:
+            fee_per_byte = self.pwrpy.get_fee_per_byte()
+
+        tx = TransactionBuilder.get_change_vida_owner_txn_fee_share_proposal_transaction(
+            title, description, vida_owner_txn_fee_share, nonce, self.pwrpy.get_chainId(), 
+            self.get_address(), fee_per_byte
+        )
+        signature = self.get_signed_transaction(tx)
+        return self.pwrpy.broadcast_transaction(signature)
+
+    def propose_other(self, title: str, description: str, fee_per_byte = None, nonce = None):
+        response = self.__make_sure_public_key_is_set(fee_per_byte)
+        if response != None and response.success == False: return response
+
+        if nonce is None:
+            nonce = self.get_nonce()
+        if fee_per_byte is None:
+            fee_per_byte = self.pwrpy.get_fee_per_byte()
+
+        tx = TransactionBuilder.get_other_proposal_transaction(
+            title, description, nonce, self.pwrpy.get_chainId(), 
+            self.get_address(), fee_per_byte
+        )
+        signature = self.get_signed_transaction(tx)
+        return self.pwrpy.broadcast_transaction(signature)
+
+    def vote_on_proposal(self, proposal_hash: str, vote: int, fee_per_byte = None, nonce = None):
+        response = self.__make_sure_public_key_is_set(fee_per_byte)
+        if response != None and response.success == False: return response
+
+        if nonce is None:
+            nonce = self.get_nonce()
+        if fee_per_byte is None:
+            fee_per_byte = self.pwrpy.get_fee_per_byte()
+
+        tx = TransactionBuilder.get_vote_on_proposal_transaction(
+            proposal_hash, vote, nonce, self.pwrpy.get_chainId(), 
+            self.get_address(), fee_per_byte
+        )
+        signature = self.get_signed_transaction(tx)
+        return self.pwrpy.broadcast_transaction(signature)
+
+    # Guardian Transactions
+    def guardian_approval(self, wrapped_txns: List[bytes], fee_per_byte = None, nonce = None):
+        response = self.__make_sure_public_key_is_set(fee_per_byte)
+        if response != None and response.success == False: return response
+
+        if nonce is None:
+            nonce = self.get_nonce()
+        if fee_per_byte is None:
+            fee_per_byte = self.pwrpy.get_fee_per_byte()
+
+        tx = TransactionBuilder.get_guardian_approval_transaction(
+            wrapped_txns, nonce, self.pwrpy.get_chainId(), 
+            self.get_address(), fee_per_byte
+        )
+        signature = self.get_signed_transaction(tx)
+        return self.pwrpy.broadcast_transaction(signature)
+
+    def remove_guardian(self, fee_per_byte = None, nonce = None):
+        response = self.__make_sure_public_key_is_set(fee_per_byte)
+        if response != None and response.success == False: return response
+
+        if nonce is None:
+            nonce = self.get_nonce()
+        if fee_per_byte is None:
+            fee_per_byte = self.pwrpy.get_fee_per_byte()
+
+        tx = TransactionBuilder.get_remove_guardian_transaction(
+            nonce, self.pwrpy.get_chainId(), self.get_address(), fee_per_byte
+        )
+        signature = self.get_signed_transaction(tx)
+        return self.pwrpy.broadcast_transaction(signature)
+
+    def set_guardian(self, expiry_date: int, guardian_address: str, fee_per_byte = None, nonce = None):
+        response = self.__make_sure_public_key_is_set(fee_per_byte)
+        if response != None and response.success == False: return response
+
+        if nonce is None:
+            nonce = self.get_nonce()
+        if fee_per_byte is None:
+            fee_per_byte = self.pwrpy.get_fee_per_byte()
+
+        tx = TransactionBuilder.get_set_guardian_transaction(
+            expiry_date, guardian_address, nonce, self.pwrpy.get_chainId(), 
+            self.get_address(), fee_per_byte
+        )
+        signature = self.get_signed_transaction(tx)
+        return self.pwrpy.broadcast_transaction(signature)
+
+    # Staking Transactions
+    def move_stake(self, shares_amount: int, from_validator: str, to_validator: str, 
+                  fee_per_byte = None, nonce = None):
+        response = self.__make_sure_public_key_is_set(fee_per_byte)
+        if response != None and response.success == False: return response
+
+        if nonce is None:
+            nonce = self.get_nonce()
+        if fee_per_byte is None:
+            fee_per_byte = self.pwrpy.get_fee_per_byte()
+
+        tx = TransactionBuilder.get_move_stake_transaction(
+            shares_amount, from_validator, to_validator, nonce, self.pwrpy.get_chainId(), 
+            self.get_address(), fee_per_byte
+        )
+        signature = self.get_signed_transaction(tx)
+        return self.pwrpy.broadcast_transaction(signature)
+
+    def remove_validator(self, validator_address: str, fee_per_byte = None, nonce = None):
+        response = self.__make_sure_public_key_is_set(fee_per_byte)
+        if response != None and response.success == False: return response
+
+        if nonce is None:
+            nonce = self.get_nonce()
+        if fee_per_byte is None:
+            fee_per_byte = self.pwrpy.get_fee_per_byte()
+
+        tx = TransactionBuilder.get_remove_validator_transaction(
+            validator_address, nonce, self.pwrpy.get_chainId(), 
+            self.get_address(), fee_per_byte
+        )
+        signature = self.get_signed_transaction(tx)
+        return self.pwrpy.broadcast_transaction(signature)
+
+    def withdraw(self, shares_amount: int, validator: str, fee_per_byte = None, nonce = None):
+        response = self.__make_sure_public_key_is_set(fee_per_byte)
+        if response != None and response.success == False: return response
+
+        if nonce is None:
+            nonce = self.get_nonce()
+        if fee_per_byte is None:
+            fee_per_byte = self.pwrpy.get_fee_per_byte()
+
+        tx = TransactionBuilder.get_withdraw_transaction(
+            shares_amount, validator, nonce, self.pwrpy.get_chainId(), 
+            self.get_address(), fee_per_byte
+        )
+        signature = self.get_signed_transaction(tx)
+        return self.pwrpy.broadcast_transaction(signature)
+
+    # VIDA Transactions
+    def claim_vida_id(self, vida_id: int, fee_per_byte = None, nonce = None):
+        response = self.__make_sure_public_key_is_set(fee_per_byte)
+        if response != None and response.success == False: return response
+
+        if nonce is None:
+            nonce = self.get_nonce()
+        if fee_per_byte is None:
+            fee_per_byte = self.pwrpy.get_fee_per_byte()
+
+        tx = TransactionBuilder.get_claim_vida_id_transaction(
+            vida_id, nonce, self.pwrpy.get_chainId(), 
+            self.get_address(), fee_per_byte
+        )
+        signature = self.get_signed_transaction(tx)
+        return self.pwrpy.broadcast_transaction(signature)
+
+    def conduit_approval(self, vida_id: int, wrapped_txns: List[bytes], fee_per_byte = None, nonce = None):
+        response = self.__make_sure_public_key_is_set(fee_per_byte)
+        if response != None and response.success == False: return response
+
+        if nonce is None:
+            nonce = self.get_nonce()
+        if fee_per_byte is None:
+            fee_per_byte = self.pwrpy.get_fee_per_byte()
+
+        tx = TransactionBuilder.get_conduit_approval_transaction(
+            vida_id, wrapped_txns, nonce, self.pwrpy.get_chainId(), 
+            self.get_address(), fee_per_byte
+        )
+        signature = self.get_signed_transaction(tx)
+        return self.pwrpy.broadcast_transaction(signature)
+
+    def send_payable_vida_data(self, vida_id: int, data: bytes, value: int, fee_per_byte = None, nonce = None):
+        response = self.__make_sure_public_key_is_set(fee_per_byte)
+        if response != None and response.success == False: return response
+
+        if nonce is None:
+            nonce = self.get_nonce()
+        if fee_per_byte is None:
+            fee_per_byte = self.pwrpy.get_fee_per_byte()
+
+        tx = TransactionBuilder.get_payable_vida_data_transaction(
+            vida_id, data, value, nonce, self.pwrpy.get_chainId(), 
+            self.get_address(), fee_per_byte
+        )
+        signature = self.get_signed_transaction(tx)
+        return self.pwrpy.broadcast_transaction(signature)
+    
+    def send_vida_data(self, vida_id: int, data: bytes, fee_per_byte = None, nonce = None):
+        return self.send_payable_vida_data(vida_id, data, 0, fee_per_byte, nonce)
+
+    def remove_conduits(self, vida_id: int, conduits: List[str], fee_per_byte = None, nonce = None):
+        response = self.__make_sure_public_key_is_set(fee_per_byte)
+        if response != None and response.success == False: return response
+
+        if nonce is None:
+            nonce = self.get_nonce()
+        if fee_per_byte is None:
+            fee_per_byte = self.pwrpy.get_fee_per_byte()
+
+        tx = TransactionBuilder.get_remove_conduits_transaction(
+            vida_id, conduits, nonce, self.pwrpy.get_chainId(), 
+            self.get_address(), fee_per_byte
+        )
+        signature = self.get_signed_transaction(tx)
+        return self.pwrpy.broadcast_transaction(signature)
+
+    def set_conduit_mode(self, vida_id: int, mode: int, conduit_threshold: int, conduits: List[str], 
+                        fee_per_byte = None, nonce = None):
+        response = self.__make_sure_public_key_is_set(fee_per_byte)
+        if response != None and response.success == False: return response
+
+        if nonce is None:
+            nonce = self.get_nonce()
+        if fee_per_byte is None:
+            fee_per_byte = self.pwrpy.get_fee_per_byte()
+
+        tx = TransactionBuilder.get_set_conduit_mode_transaction(
+            vida_id, mode, conduit_threshold, conduits, nonce, self.pwrpy.get_chainId(), 
+            self.get_address(), fee_per_byte
+        )
+        signature = self.get_signed_transaction(tx)
+        return self.pwrpy.broadcast_transaction(signature)
+
+    def set_vida_private_state(self, vida_id: int, private_state: bool, fee_per_byte = None, nonce = None):
+        response = self.__make_sure_public_key_is_set(fee_per_byte)
+        if response != None and response.success == False: return response
+
+        if nonce is None:
+            nonce = self.get_nonce()
+        if fee_per_byte is None:
+            fee_per_byte = self.pwrpy.get_fee_per_byte()
+
+        tx = TransactionBuilder.get_set_vida_private_state_transaction(
+            vida_id, private_state, nonce, self.pwrpy.get_chainId(), 
+            self.get_address(), fee_per_byte
+        )
+        signature = self.get_signed_transaction(tx)
+        return self.pwrpy.broadcast_transaction(signature)
+
+    def set_vida_to_absolute_public(self, vida_id: int, fee_per_byte = None, nonce = None):
+        response = self.__make_sure_public_key_is_set(fee_per_byte)
+        if response != None and response.success == False: return response
+
+        if nonce is None:
+            nonce = self.get_nonce()
+        if fee_per_byte is None:
+            fee_per_byte = self.pwrpy.get_fee_per_byte()
+
+        tx = TransactionBuilder.get_set_vida_to_absolute_public_transaction(
+            vida_id, nonce, self.pwrpy.get_chainId(), 
+            self.get_address(), fee_per_byte
+        )
+        signature = self.get_signed_transaction(tx)
+        return self.pwrpy.broadcast_transaction(signature)
+
+    def add_vida_sponsored_addresses(self, vida_id: int, sponsored_addresses: List[str], 
+                                   fee_per_byte = None, nonce = None):
+        response = self.__make_sure_public_key_is_set(fee_per_byte)
+        if response != None and response.success == False: return response
+
+        if nonce is None:
+            nonce = self.get_nonce()
+        if fee_per_byte is None:
+            fee_per_byte = self.pwrpy.get_fee_per_byte()
+
+        tx = TransactionBuilder.get_add_vida_sponsored_addresses_transaction(
+            vida_id, sponsored_addresses, nonce, self.pwrpy.get_chainId(), 
+            self.get_address(), fee_per_byte
+        )
+        signature = self.get_signed_transaction(tx)
+        return self.pwrpy.broadcast_transaction(signature)
+
+    def add_vida_allowed_senders(self, vida_id: int, allowed_senders: List[str], 
+                               fee_per_byte = None, nonce = None):
+        response = self.__make_sure_public_key_is_set(fee_per_byte)
+        if response != None and response.success == False: return response
+
+        if nonce is None:
+            nonce = self.get_nonce()
+        if fee_per_byte is None:
+            fee_per_byte = self.pwrpy.get_fee_per_byte()
+
+        tx = TransactionBuilder.get_add_vida_allowed_senders_transaction(
+            vida_id, allowed_senders, nonce, self.pwrpy.get_chainId(), 
+            self.get_address(), fee_per_byte
+        )
+        signature = self.get_signed_transaction(tx)
+        return self.pwrpy.broadcast_transaction(signature)
+
+    def remove_vida_allowed_senders(self, vida_id: int, allowed_senders: List[str], 
+                                  fee_per_byte = None, nonce = None):
+        response = self.__make_sure_public_key_is_set(fee_per_byte)
+        if response != None and response.success == False: return response
+
+        if nonce is None:
+            nonce = self.get_nonce()
+        if fee_per_byte is None:
+            fee_per_byte = self.pwrpy.get_fee_per_byte()
+
+        tx = TransactionBuilder.get_remove_vida_allowed_senders_transaction(
+            vida_id, allowed_senders, nonce, self.pwrpy.get_chainId(), 
+            self.get_address(), fee_per_byte
+        )
+        signature = self.get_signed_transaction(tx)
+        return self.pwrpy.broadcast_transaction(signature)
+
+    def remove_sponsored_addresses(self, vida_id: int, sponsored_addresses: List[str], 
+                                 fee_per_byte = None, nonce = None):
+        response = self.__make_sure_public_key_is_set(fee_per_byte)
+        if response != None and response.success == False: return response
+
+        if nonce is None:
+            nonce = self.get_nonce()
+        if fee_per_byte is None:
+            fee_per_byte = self.pwrpy.get_fee_per_byte()
+
+        tx = TransactionBuilder.get_remove_sponsored_addresses_transaction(
+            vida_id, sponsored_addresses, nonce, self.pwrpy.get_chainId(), 
+            self.get_address(), fee_per_byte
+        )
+        signature = self.get_signed_transaction(tx)
+        return self.pwrpy.broadcast_transaction(signature)
+
+    def set_pwr_transfer_rights(self, vida_id: int, owner_can_transfer_pwr: bool, 
+                              fee_per_byte = None, nonce = None):
+        response = self.__make_sure_public_key_is_set(fee_per_byte)
+        if response != None and response.success == False: return response
+
+        if nonce is None:
+            nonce = self.get_nonce()
+        if fee_per_byte is None:
+            fee_per_byte = self.pwrpy.get_fee_per_byte()
+
+        tx = TransactionBuilder.get_set_pwr_transfer_rights_transaction(
+            vida_id, owner_can_transfer_pwr, nonce, self.pwrpy.get_chainId(), 
+            self.get_address(), fee_per_byte
+        )
+        signature = self.get_signed_transaction(tx)
+        return self.pwrpy.broadcast_transaction(signature)
+
+    def transfer_pwr_from_vida(self, vida_id: int, receiver: str, amount: int, 
+                             fee_per_byte = None, nonce = None):
+        response = self.__make_sure_public_key_is_set(fee_per_byte)
+        if response != None and response.success == False: return response
+
+        if nonce is None:
+            nonce = self.get_nonce()
+        if fee_per_byte is None:
+            fee_per_byte = self.pwrpy.get_fee_per_byte()
+
+        tx = TransactionBuilder.get_transfer_pwr_from_vida_transaction(
+            vida_id, receiver, amount, nonce, self.pwrpy.get_chainId(), 
+            self.get_address(), fee_per_byte
+        )
+        signature = self.get_signed_transaction(tx)
+        return self.pwrpy.broadcast_transaction(signature)
+    
+    def get_rpc(self):
+        return self.pwrpy
+
+    def __make_sure_public_key_is_set(self, fee_per_byte):
+        nonce = self.get_nonce()
+        if nonce == 0:
+            return self.set_public_key(self.get_public_key(), fee_per_byte, nonce)
+        else:
+            return None
+
+
+    def get_signed_transaction(self, transaction: bytes) -> bytes | None:
         if transaction is None:
             return None
-        signature = Signature.sign_message(private_key=self.get_private_key(),
-                                           message=transaction)
-        final_txn = bytearray(transaction)
-        final_txn.extend(signature)
+        hasher = keccak.new(digest_bits=256)
+        hasher.update(transaction)
+        tx_hash = hasher.digest()
 
+        signature = self.sign(tx_hash)
+        signature_len_bytes = len(signature).to_bytes(2, byteorder='big')
+
+        final_txn = bytearray()
+        final_txn.extend(transaction)
+        final_txn.extend(signature)
+        final_txn.extend(signature_len_bytes)
         return bytes(final_txn)
 
-    def store_wallet(self, path: str, password: str) -> None:
-        try:
-            private_key_bytes = self.private_key.to_bytes(
-                (self.private_key.bit_length() + 7) // 8, 
-                byteorder='big'
-            )
-            encrypted_private_key = AES256.encrypt(private_key_bytes, password)
-            
-            with open(path, 'wb') as f:
-                f.write(encrypted_private_key)
-        except Exception as e:
-            raise Exception(f"Failed to store wallet: {str(e)}")
-
     @staticmethod
-    def load_wallet(path: str, password: str, pwrpy: PWRPY = None) -> 'PWRWallet':
-        try:
-            with open(path, 'rb') as f:
-                encrypted_private_key = f.read()
-            
-            private_key_bytes = AES256.decrypt(encrypted_private_key, password)
-            
-            return PWRWallet(private_key_bytes, pwrpy)
-        except Exception as e:
-            print(f"Error loading wallet: {e}")
-            return None
-
-    def transfer_pwr(self, to, amount, nonce = None):
-        if nonce is None:
-            nonce = self.get_nonce()
-        tx = TransactionBuilder.get_transfer_pwr_transaction(to, amount, nonce, self.pwrpy.get_chainId())
-        signature = self.get_signed_transaction(tx)
-        return self.pwrpy.broadcast_transaction(signature)
-
-    def join(self, ip, nonce = None):
-        if nonce is None:
-            nonce = self.get_nonce()
-        tx = TransactionBuilder.get_join_transaction(ip, nonce, self.pwrpy.get_chainId())
-        signature = self.get_signed_transaction(tx)
-        return self.pwrpy.broadcast_transaction(signature)
-
-    def claim_active_node_spot(self, nonce = None):
-        if nonce is None:
-            nonce = self.get_nonce()
-        tx = TransactionBuilder.get_claim_active_node_spot_transaction(nonce, self.pwrpy.get_chainId())
-        signature = self.get_signed_transaction(tx)
-        return self.pwrpy.broadcast_transaction(signature)
-
-    def delegate(self, validator, amount, nonce = None):
-        if nonce is None:
-            nonce = self.get_nonce()
-        tx = TransactionBuilder.get_delegate_transaction(validator, amount, nonce, self.pwrpy.get_chainId())
-        signature = self.get_signed_transaction(tx)
-        return self.pwrpy.broadcast_transaction(signature)
-
-    def withdraw(self, validator, shares_amount, nonce = None):
-        if nonce is None:
-            nonce = self.get_nonce()
-        tx = TransactionBuilder.get_withdraw_transaction(validator, shares_amount, nonce, self.pwrpy.get_chainId())
-        signature = self.get_signed_transaction(tx)
-        return self.pwrpy.broadcast_transaction(signature)
-
-    def send_vm_data_transaction(self, vm_id, data, nonce = None):
-        if nonce is None:
-            nonce = self.get_nonce()
-        tx = TransactionBuilder.get_vm_data_transaction(vm_id, data, nonce, self.pwrpy.get_chainId())
-        signature = self.get_signed_transaction(tx)
-        return self.pwrpy.broadcast_transaction(signature)
-
-    def claim_vm_id(self, vm_id, nonce = None):
-        if nonce is None:
-            nonce = self.get_nonce()
-        tx = TransactionBuilder.get_claim_vm_id_transaction(vm_id, nonce, self.pwrpy.get_chainId())
-        signature = self.get_signed_transaction(tx)
-        return self.pwrpy.broadcast_transaction(signature)
-
-    def set_guardian(self, guardian, expiry_date, nonce = None):
-        if nonce is None:
-            nonce = self.get_nonce()
-        tx = TransactionBuilder.get_set_guardian_transaction(guardian, expiry_date, nonce, self.pwrpy.get_chainId())
-        signature = self.get_signed_transaction(tx)
-        return self.pwrpy.broadcast_transaction(signature)
-
-    def remove_guardian(self, nonce = None):
-        if nonce is None:
-            nonce = self.get_nonce()
-        tx = TransactionBuilder.get_remove_guardian_transaction(nonce, self.pwrpy.get_chainId())
-        signature = self.get_signed_transaction(tx)
-        return self.pwrpy.broadcast_transaction(signature)
-
-    def send_guardian_approval_transaction(self, transactions, nonce = None):
-        if nonce is None:
-            nonce = self.get_nonce()
-        tx = TransactionBuilder.get_guardian_approval_transaction(transactions, nonce, self.pwrpy.get_chainId())
-        signature = self.get_signed_transaction(tx)
-        return self.pwrpy.broadcast_transaction(signature)
-
-    def send_payable_vm_data_transaction(self, vm_id, value, data, nonce = None):
-        if nonce is None:
-            nonce = self.get_nonce()
-        tx = TransactionBuilder.get_payable_vm_data_transaction(vm_id, value, data, nonce, self.pwrpy.get_chainId())
-        signature = self.get_signed_transaction(tx)
-        try:
-            return self.pwrpy.broadcast_transaction(signature)
-        except Exception as e:
-            return ApiResponse(success=False, data=None, message=str(e))
-
-    def get_signed_validator_remove_transaction(self, validator, nonce):
-        return self.get_signed_transaction(
-            TransactionBuilder.get_validator_remove_transaction(validator, nonce, self.pwrpy.get_chainId()))
-
-    def send_validator_remove_transaction(self, validator, nonce = None):
-        if nonce is None:
-            nonce = self.get_nonce()
-        return self.pwrpy.broadcast_transaction(self.get_signed_validator_remove_transaction(validator, nonce))
-
-    def get_signed_conduit_approval_transaction(self, vm_id, transactions, nonce):
-        return self.get_signed_transaction(
-            TransactionBuilder.get_conduit_approval_transaction(vm_id, transactions, nonce,
-                                                                self.pwrpy.get_chainId()))
-
-    def conduit_approve(self, vm_id, transactions, nonce = None):
-        if nonce is None:
-            nonce = self.get_nonce()
-        return self.pwrpy.broadcast_transaction(
-            self.get_signed_conduit_approval_transaction(vm_id, transactions, nonce))
-
-    def get_signed_set_conduit_transaction(self, vm_id, conduits, nonce):
-        return self.get_signed_transaction(
-            TransactionBuilder.get_set_conduits_transaction(vm_id, conduits, nonce, self.pwrpy.get_chainId()))
-
-    def set_conduits(self, vm_id, conduits, nonce = None):
-        if nonce is None:
-            nonce = self.get_nonce()
-        return self.pwrpy.broadcast_transaction(self.get_signed_set_conduit_transaction(vm_id, conduits, nonce))
-
-    def get_signed_move_stake_transaction(self, shares_amount, from_validator, to_validator, nonce):
-        return self.get_signed_transaction(
-            TransactionBuilder.get_move_stake_transaction(shares_amount, from_validator, to_validator, nonce,
-                                                          self.pwrpy.get_chainId()))
-
-    def move_stake(self, shares_amount, from_validator, to_validator, nonce = None):
-        if nonce is None:
-            nonce = self.get_nonce()
-        return self.pwrpy.broadcast_transaction(
-            self.get_signed_move_stake_transaction(shares_amount, from_validator, to_validator, nonce))
-
-    ### Governance Update
-    def get_signed_change_early_withdraw_penalty_proposal_txn(self, withdrawal_penalty_time, withdrawal_penalty, title,
-                                                              description, nonce):
-        return self.get_signed_transaction(
-            TransactionBuilder.get_change_early_withdraw_penalty_proposal_txn(withdrawal_penalty_time,
-                                                                              withdrawal_penalty, title, description,
-                                                                              nonce, self.pwrpy.get_chainId()))
-
-    def create_proposal_change_early_withdrawal_penalty(self, withdrawal_penalty_time, withdrawal_penalty, title,
-                                                        description, nonce = None):
-        if nonce is None:
-            nonce = self.get_nonce()
-        return self.pwrpy.broadcast_transaction(
-            self.get_signed_change_early_withdraw_penalty_proposal_txn(withdrawal_penalty_time, withdrawal_penalty,
-                                                                       title, description, nonce))
-
-    def get_signed_change_fee_per_byte_proposal_txn(self, fee_per_byte, title, description, nonce):
-        return self.get_signed_transaction(
-            TransactionBuilder.get_change_fee_per_byte_proposal_txn(fee_per_byte, title, description, nonce,
-                                                                    self.pwrpy.get_chainId()))
-
-    def create_proposal_change_fee_per_byte(self, fee_per_byte, title, description, nonce = None):
-        if nonce is None:
-            nonce = self.get_nonce()
-        return self.pwrpy.broadcast_transaction(
-            self.get_signed_change_fee_per_byte_proposal_txn(fee_per_byte, title, description, nonce))
-
-    def get_signed_change_max_block_size_proposal_txn(self, max_block_size, title, description, nonce):
-        return self.get_signed_transaction(
-            TransactionBuilder.get_change_max_block_size_proposal_txn(max_block_size, title, description, nonce,
-                                                                      self.pwrpy.get_chainId()))
-
-    def create_proposal_change_max_block_size(self, max_block_size, title, description, nonce = None):
-        if nonce is None:
-            nonce = self.get_nonce()
-        return self.pwrpy.broadcast_transaction(
-            self.get_signed_change_max_block_size_proposal_txn(max_block_size, title, description, nonce))
-
-    def get_signed_change_max_txn_size_proposal_txn(self, max_txn_size, title, description, nonce):
-        return self.get_signed_transaction(
-            TransactionBuilder.get_change_max_txn_size_proposal_txn(max_txn_size, title, description, nonce,
-                                                                    self.pwrpy.get_chainId()))
-
-    def create_proposal_change_max_txn_size(self, max_txn_size, title, description, nonce = None):
-        if nonce is None:
-            nonce = self.get_nonce()
-        return self.pwrpy.broadcast_transaction(
-            self.get_signed_change_max_txn_size_proposal_txn(max_txn_size, title, description, nonce))
-
-    def get_signed_change_overall_burn_percentage_proposal_txn(self, burn_percentage, title, description, nonce):
-        return self.get_signed_transaction(
-            TransactionBuilder.get_change_overall_burn_percentage_proposal_txn(burn_percentage, title, description,
-                                                                               nonce, self.pwrpy.get_chainId()))
-
-    def create_proposal_change_overall_burn_percentage(self, burn_percentage, title, description, nonce = None):
-        if nonce is None:
-            nonce = self.get_nonce()
-        return self.pwrpy.broadcast_transaction(
-            self.get_signed_change_overall_burn_percentage_proposal_txn(burn_percentage, title, description, nonce))
-
-    def get_signed_change_reward_per_year_proposal_txn(self, reward_per_year, title, description, nonce):
-        return self.get_signed_transaction(
-            TransactionBuilder.get_change_reward_per_year_proposal_txn(reward_per_year, title, description, nonce,
-                                                                       self.pwrpy.get_chainId()))
-
-    def create_proposal_change_reward_per_year(self, reward_per_year, title, description, nonce = None):
-        if nonce is None:
-            nonce = self.get_nonce()
-        return self.pwrpy.broadcast_transaction(
-            self.get_signed_change_reward_per_year_proposal_txn(reward_per_year, title, description, nonce))
-
-    def get_signed_change_validator_count_limit_proposal_txn(self, validator_count_limit, title, description, nonce):
-        return self.get_signed_transaction(
-            TransactionBuilder.get_change_validator_count_limit_proposal_txn(validator_count_limit, title, description,
-                                                                             nonce, self.pwrpy.get_chainId()))
-
-    def create_proposal_change_validator_count_limit(self, validator_count_limit, title, description, nonce = None):
-        if nonce is None:
-            nonce = self.get_nonce()
-        return self.pwrpy.broadcast_transaction(
-            self.get_signed_change_validator_count_limit_proposal_txn(validator_count_limit, title, description, nonce))
-
-    def get_signed_change_validator_joining_fee_proposal_txn(self, joining_fee, title, description, nonce):
-        return self.get_signed_transaction(
-            TransactionBuilder.get_change_validator_joining_fee_proposal_txn(joining_fee, title, description, nonce,
-                                                                             self.pwrpy.get_chainId()))
-
-    def create_proposal_change_validator_joining_fee(self, joining_fee, title, description, nonce = None):
-        if nonce is None:
-            nonce = self.get_nonce()
-        return self.pwrpy.broadcast_transaction(
-            self.get_signed_change_validator_joining_fee_proposal_txn(joining_fee, title, description, nonce))
-
-    def get_signed_change_vm_id_claiming_fee_proposal_txn(self, claiming_fee, title, description, nonce):
-        return self.get_signed_transaction(
-            TransactionBuilder.get_change_vm_id_claiming_fee_proposal_txn(claiming_fee, title, description, nonce,
-                                                                          self.pwrpy.get_chainId()))
-
-    def create_proposal_change_vm_id_claiming_fee(self, claiming_fee, title, description, nonce = None):
-        if nonce is None:
-            nonce = self.get_nonce()
-        return self.pwrpy.broadcast_transaction(
-            self.get_signed_change_vm_id_claiming_fee_proposal_txn(claiming_fee, title, description, nonce))
-
-    def get_signed_change_vm_owner_txn_fee_share_proposal_txn(self, fee_share, title, description, nonce):
-        return self.get_signed_transaction(
-            TransactionBuilder.get_change_vm_owner_txn_fee_share_proposal_txn(fee_share, title, description, nonce,
-                                                                              self.pwrpy.get_chainId()))
-
-    def create_proposal_change_vm_owner_txn_fee_share(self, fee_share, title, description, nonce = None):
-        if nonce is None:
-            nonce = self.get_nonce()
-        return self.pwrpy.broadcast_transaction(
-            self.get_signed_change_vm_owner_txn_fee_share_proposal_txn(fee_share, title, description, nonce))
-
-    def get_signed_other_proposal_txn(self, title, description, nonce):
-        return self.get_signed_transaction(
-            TransactionBuilder.get_other_proposal_txn(title, description, nonce, self.pwrpy.get_chainId()))
-
-    def create_proposal_other_proposal(self, title, description, nonce = None):
-        if nonce is None:
-            nonce = self.get_nonce()
-        return self.pwrpy.broadcast_transaction(self.get_signed_other_proposal_txn(title, description, nonce))
-
-    def get_signed_vote_on_proposal_txn(self, proposal_hash, vote, nonce):
-        return self.get_signed_transaction(
-            TransactionBuilder.get_vote_on_proposal_txn(proposal_hash, vote, nonce, self.pwrpy.get_chainId()))
-
-    def vote_on_proposal(self, proposal_hash, vote, nonce = None):
-        if nonce is None:
-            nonce = self.get_nonce()
-        return self.pwrpy.broadcast_transaction(self.get_signed_vote_on_proposal_txn(proposal_hash, vote, nonce))
+    def __hash224(input_bytes: bytes) -> bytes:
+        k = sha3.keccak_224()
+        k.update(input_bytes)
+        return k.digest()

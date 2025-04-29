@@ -52,20 +52,20 @@ class Transaction:
             return ClaimSpotTransaction.from_json(json_data, block_number, timestamp, position_in_the_block)
         elif txn_type == TransferTransaction.TYPE.lower():
             return TransferTransaction.from_json(json_data, block_number, timestamp, position_in_the_block)
-        elif txn_type == VmDataTransaction.TYPE.lower():
-            return VmDataTransaction.from_json(json_data, block_number, timestamp, position_in_the_block)
+        elif txn_type == VidaDataTransaction.TYPE.lower():
+            return VidaDataTransaction.from_json(json_data, block_number, timestamp, position_in_the_block)
         elif txn_type == DelegateTransaction.TYPE.lower():
             return DelegateTransaction.from_json(json_data, block_number, timestamp, position_in_the_block)
         elif txn_type == WithdrawTransaction.TYPE.lower():
             return WithdrawTransaction.from_json(json_data, block_number, timestamp, position_in_the_block)
         elif txn_type == JoinTransaction.TYPE.lower():
             return JoinTransaction.from_json(json_data, block_number, timestamp, position_in_the_block)
-        elif txn_type == ClaimVmIdTransaction.TYPE.lower():
-            return ClaimVmIdTransaction.from_json(json_data, block_number, timestamp, position_in_the_block)
+        elif txn_type == ClaimVidaIdTransaction.TYPE.lower():
+            return ClaimVidaIdTransaction.from_json(json_data, block_number, timestamp, position_in_the_block)
         elif txn_type == SetGuardianTransaction.TYPE.lower():
             return SetGuardianTransaction.from_json(json_data, block_number, timestamp, position_in_the_block)
-        elif txn_type == PayableVmDataTransaction.TYPE.lower():
-            return PayableVmDataTransaction.from_json(json_data, block_number, timestamp, position_in_the_block)
+        elif txn_type == PayableVidaDataTransaction.TYPE.lower():
+            return PayableVidaDataTransaction.from_json(json_data, block_number, timestamp, position_in_the_block)
         elif txn_type == GuardianApprovalTransaction.TYPE.lower():
             return GuardianApprovalTransaction.from_json(json_data, block_number, timestamp, position_in_the_block)
         elif txn_type == ConduitApprovalTransaction.TYPE.lower():
@@ -102,11 +102,11 @@ class Transaction:
         elif txn_type == ChangeValidatorJoiningFeeProposalTransaction.TYPE.lower():
             return ChangeValidatorJoiningFeeProposalTransaction.from_json(json_data, block_number, timestamp,
                                                                           position_in_the_block)
-        elif txn_type == ChangeVmIdClaimingFeeProposalTransaction.TYPE.lower():
-            return ChangeVmIdClaimingFeeProposalTransaction.from_json(json_data, block_number, timestamp,
+        elif txn_type == ChangeVidaIdClaimingFeeProposalTransaction.TYPE.lower():
+            return ChangeVidaIdClaimingFeeProposalTransaction.from_json(json_data, block_number, timestamp,
                                                                       position_in_the_block)
-        elif txn_type == ChangeVmOwnerTxnFeeShareProposalTransaction.TYPE.lower():
-            return ChangeVmOwnerTxnFeeShareProposalTransaction.from_json(json_data, block_number, timestamp,
+        elif txn_type == ChangeVidaOwnerTxnFeeShareProposalTransaction.TYPE.lower():
+            return ChangeVidaOwnerTxnFeeShareProposalTransaction.from_json(json_data, block_number, timestamp,
                                                                          position_in_the_block)
         elif txn_type == OtherProposalTransaction.TYPE.lower():
             return OtherProposalTransaction.from_json(json_data, block_number, timestamp, position_in_the_block)
@@ -256,26 +256,26 @@ class ClaimSpotTransaction(Transaction):
         return json_object
 
 
-class ClaimVmIdTransaction(Transaction):
-    TYPE = "Claim VM ID"
+class ClaimVidaIdTransaction(Transaction):
+    TYPE = "Claim VIDA ID"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._vm_id: int = 0
+        self._vida_id: int = 0
 
     @classmethod
     def from_json(cls, json_data, block_number, timestamp, position_in_the_block):
         instance = super().from_json(json_data, block_number, timestamp, position_in_the_block)
-        instance._vm_id = json_data.get('vmId', 0)
+        instance._vida_id = json_data.get('vidaId', 0)
         return instance
 
     @property
-    def vm_id(self) -> int:
-        return self._vm_id
+    def vida_id(self) -> int:
+        return self._vida_id
 
     def to_json(self):
         json_object = super().to_json()
-        json_object['vmId'] = self.vm_id
+        json_object['vidaId'] = self.vida_id
         return json_object
 
 
@@ -284,13 +284,13 @@ class ConduitApprovalTransaction(Transaction):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._vm_id: int = 0
+        self._vida_id: int = 0
         self._transactions: List[Transaction] = []
 
     @classmethod
     def from_json(cls, json_data, block_number, timestamp, position_in_the_block):
         instance = super().from_json(json_data, block_number, timestamp, position_in_the_block)
-        instance._vm_id = json_data.get('vmId', 0)
+        instance._vida_id = json_data.get('vidaId', 0)
         transactions_data = json_data.get('transactions', [])
         instance._transactions = [
             Transaction.from_json(loads(transaction_data), block_number, timestamp, position_in_the_block)
@@ -299,8 +299,8 @@ class ConduitApprovalTransaction(Transaction):
         return instance
 
     @property
-    def vm_id(self) -> int:
-        return self._vm_id
+    def vida_id(self) -> int:
+        return self._vida_id
 
     @property
     def transactions(self) -> List[Transaction]:
@@ -308,7 +308,7 @@ class ConduitApprovalTransaction(Transaction):
 
     def to_json(self):
         json_object = super().to_json()
-        json_object['vmId'] = self.vm_id
+        json_object['vidaId'] = self.vida_id
         json_object['transactions'] = [transaction.to_json() for transaction in self.transactions]
         return json_object
 
@@ -393,24 +393,24 @@ class JoinTransaction(Transaction):
         return json_object
 
 
-class PayableVmDataTransaction(Transaction):
-    TYPE = "Payable VM Data"
+class PayableVidaDataTransaction(Transaction):
+    TYPE = "Payable VIDA Data"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._vm_id: int = 0
+        self._vida_id: int = 0
         self._data: str = "0x"
 
     @classmethod
     def from_json(cls, json_data, block_number, timestamp, position_in_the_block):
         instance = super().from_json(json_data, block_number, timestamp, position_in_the_block)
-        instance._vm_id = json_data.get('vmId', 0)
+        instance._vida_id = json_data.get('vidaId', 0)
         instance._data = json_data.get('data', '0x')
         return instance
 
     @property
-    def vm_id(self) -> int:
-        return self._vm_id
+    def vida_id(self) -> int:
+        return self._vida_id
 
     @property
     def data(self) -> str:
@@ -418,7 +418,7 @@ class PayableVmDataTransaction(Transaction):
 
     def to_json(self):
         json_object = super().to_json()
-        json_object['vmId'] = self.vm_id
+        json_object['vidaId'] = self.vida_id
         json_object['data'] = self.data
         return json_object
 
@@ -473,24 +473,24 @@ class TransferTransaction(Transaction):
         return super().from_json(json_data, block_number, timestamp, position_in_the_block)
 
 
-class VmDataTransaction(Transaction):
-    TYPE = "VM Data"
+class VidaDataTransaction(Transaction):
+    TYPE = "VIDA Data"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._vm_id: int = 0
+        self._vida_id: int = 0
         self._data: str = ""
 
     @classmethod
     def from_json(cls, json_data, block_number, timestamp, position_in_the_block):
         instance = super().from_json(json_data, block_number, timestamp, position_in_the_block)
-        instance._vm_id = json_data.get('vmId', 0)
+        instance._vida_id = json_data.get('vidaId', 0)
         instance._data = json_data.get('data', "")
         return instance
 
     @property
-    def vm_id(self) -> int:
-        return self._vm_id
+    def vida_id(self) -> int:
+        return self._vida_id
 
     @property
     def data(self) -> str:
@@ -498,9 +498,9 @@ class VmDataTransaction(Transaction):
 
     def to_json(self):
         json_object = super().to_json()
-        json_object['vmId'] = self.vm_id
+        json_object['vidaId'] = self.vida_id
         json_object['data'] = self.data
-        json_object['type'] = "VM Data"
+        json_object['type'] = "VIDA Data"
         return json_object
 
 
@@ -538,14 +538,14 @@ class AddConduitsTransaction(Transaction):
     TYPE = "Add Conduits"
 
     def __init__(self, json_data: dict, block_number: int, timestamp: int, position_in_the_block: int,
-                 vm_id: int = 0, conduits: List[str] = None):
+                 vida_id: int = 0, conduits: List[str] = None):
         super().__init__(json_data, block_number, timestamp, position_in_the_block)
-        self.vm_id = json_data.get("vmId", 0)
+        self.vida_id = json_data.get("vidaId", 0)
         self.conduits = json_data.get("conduits", [])
 
     def to_json(self) -> dict:
         transaction = super().to_json()
-        transaction["vmId"] = self.vm_id
+        transaction["vidaId"] = self.vida_id
         transaction["conduits"] = self.conduits
         return transaction
 
@@ -572,14 +572,14 @@ class RemoveConduitsTransaction(Transaction):
     TYPE = "Remove Conduits"
 
     def __init__(self, json_data: dict, block_number: int, timestamp: int, position_in_the_block: int,
-                 vm_id: int = 0, conduits: List[str] = None):
+                 vida_id: int = 0, conduits: List[str] = None):
         super().__init__(json_data, block_number, timestamp, position_in_the_block)
-        self.vm_id = json_data.get("vmId", 0)
+        self.vida_id = json_data.get("vidaId", 0)
         self.conduits = json_data.get("conduits", [])
 
     def to_json(self) -> dict:
         transaction = super().to_json()
-        transaction["vmId"] = self.vm_id
+        transaction["vidaId"] = self.vida_id
         transaction["conduits"] = self.conduits
         return transaction
 
@@ -588,14 +588,14 @@ class SetConduitsTransaction(Transaction):
     TYPE = "Set Conduits"
 
     def __init__(self, json_data: dict, block_number: int, timestamp: int, position_in_the_block: int,
-                 vm_id: int = 0, conduits: List[str] = None):
+                 vida_id: int = 0, conduits: List[str] = None):
         super().__init__(json_data, block_number, timestamp, position_in_the_block)
-        self.vm_id = json_data.get("vmId", 0)
+        self.vida_id = json_data.get("vidaId", 0)
         self.conduits = json_data.get("conduits", [])
 
     def to_json(self) -> dict:
         transaction = super().to_json()
-        transaction["vmId"] = self.vm_id
+        transaction["vidaId"] = self.vida_id
         transaction["conduits"] = self.conduits
         return transaction
 
@@ -811,20 +811,20 @@ class ChangeValidatorJoiningFeeProposalTransaction(Transaction):
         return transaction
 
 
-class ChangeVmIdClaimingFeeProposalTransaction(Transaction):
-    TYPE = "Change Vm Id Claiming Fee Proposal"
+class ChangeVidaIdClaimingFeeProposalTransaction(Transaction):
+    TYPE = "Change Vida Id Claiming Fee Proposal"
 
     def __init__(self, json_data: dict, block_number: int, timestamp: int, position_in_the_block: int,
                  claiming_fee: int = 8, title: str = "", description: str = ""):
         super().__init__(json_data, block_number, timestamp, position_in_the_block)
-        self.claiming_fee = json_data.get("vmIdClaimingFee", 8)
+        self.claiming_fee = json_data.get("vidaIdClaimingFee", 8)
         self.title = json_data.get("title", "")
         self.description = json_data.get("description", "")
 
     @classmethod
     def from_json(cls, json_data, block_number, timestamp, position_in_the_block):
         instance = super().from_json(json_data, block_number, timestamp, position_in_the_block)
-        instance.claiming_fee = json_data.get("vmIdClaimingFee", 8)
+        instance.claiming_fee = json_data.get("vidaIdClaimingFee", 8)
         instance.title = json_data.get("title", "")
         instance.description = json_data.get("description", "")
         return instance
@@ -837,20 +837,20 @@ class ChangeVmIdClaimingFeeProposalTransaction(Transaction):
         return transaction
 
 
-class ChangeVmOwnerTxnFeeShareProposalTransaction(Transaction):
-    TYPE = "Change VM Owner Txn Fee Share Proposal"
+class ChangeVidaOwnerTxnFeeShareProposalTransaction(Transaction):
+    TYPE = "Change VIDA Owner Txn Fee Share Proposal"
 
     def __init__(self, json_data: dict, block_number: int, timestamp: int, position_in_the_block: int,
                  fee_share: int = 8, title: str = "", description: str = ""):
         super().__init__(json_data, block_number, timestamp, position_in_the_block)
-        self.fee_share = json_data.get("vmOwnerTxnFeeShare", 8)
+        self.fee_share = json_data.get("vidaOwnerTxnFeeShare", 8)
         self.title = json_data.get("title", "")
         self.description = json_data.get("description", "")
 
     @classmethod
     def from_json(cls, json_data, block_number, timestamp, position_in_the_block):
         instance = super().from_json(json_data, block_number, timestamp, position_in_the_block)
-        instance.fee_share = json_data.get("vmOwnerTxnFeeShare", 8)
+        instance.fee_share = json_data.get("vidaOwnerTxnFeeShare", 8)
         instance.title = json_data.get("title", "")
         instance.description = json_data.get("description", "")
         return instance

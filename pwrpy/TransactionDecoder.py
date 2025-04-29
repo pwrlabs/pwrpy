@@ -23,9 +23,9 @@ class TransactionDecoder:
         elif transaction_type == 4:
             return TransactionDecoder.decode_withdraw(txn, sender, nonce)
         elif transaction_type == 5:
-            return TransactionDecoder.decode_vm_data_txn(txn, sender, nonce)
+            return TransactionDecoder.decode_vida_data_txn(txn, sender, nonce)
         elif transaction_type == 6:
-            return TransactionDecoder.decode_claim_vm_id(txn, sender, nonce)
+            return TransactionDecoder.decode_claim_vida_id(txn, sender, nonce)
         elif transaction_type == 8:
             return TransactionDecoder.decode_set_guardian_txn(txn, sender, nonce)
         elif transaction_type == 9:
@@ -33,7 +33,7 @@ class TransactionDecoder:
         elif transaction_type == 10:
             return TransactionDecoder.decode_guardian_approval_txn(txn, sender, nonce)
         elif transaction_type == 11:
-            return TransactionDecoder.decode_payable_vm_data_txn(txn, sender, nonce)
+            return TransactionDecoder.decode_payable_vida_data_txn(txn, sender, nonce)
         elif transaction_type == 12:
             return TransactionDecoder.decode_conduit_approval_txn(txn, sender, nonce)
         elif transaction_type == 13:
@@ -131,38 +131,38 @@ class TransactionDecoder:
         )
 
     @staticmethod
-    def decode_vm_data_txn(txn: bytes, sender: bytes, nonce: int) -> 'VmDataTransaction':
+    def decode_vida_data_txn(txn: bytes, sender: bytes, nonce: int) -> 'VidaDataTransaction':
         if len(txn) < 14:
-            raise ValueError("Invalid length for VM Data transaction")
+            raise ValueError("Invalid length for VIDA Data transaction")
 
-        external_vm_id = int.from_bytes(txn[6:14], byteorder='big')
+        external_vida_id = int.from_bytes(txn[6:14], byteorder='big')
 
-        data_length = len(txn) - 14 if PWRPY.is_vm_address(to_hex(sender)) else len(txn) - 79
+        data_length = len(txn) - 14 if PWRPY.is_vida_address(to_hex(sender)) else len(txn) - 79
 
         data = to_hex(txn[14:14+data_length])
 
-        return VmDataTransaction(
+        return VidaDataTransaction(
             sender=to_hex(sender),
             nonce=nonce,
             size=len(txn),
-            vm_id=external_vm_id,
+            vida_id=external_vida_id,
             data=data,
             raw_transaction=txn,
             chain_id=txn[1]
         )
 
     @staticmethod
-    def decode_claim_vm_id(txn: bytes, sender: bytes, nonce: int) -> 'ClaimVmIdTransaction':
+    def decode_claim_vida_id(txn: bytes, sender: bytes, nonce: int) -> 'ClaimVidaIdTransaction':
         if len(txn) != 14 and len(txn) != 79:
-            raise ValueError("Invalid length for claim VM ID transaction")
+            raise ValueError("Invalid length for claim VIDA ID transaction")
 
-        vm_id = int.from_bytes(txn[6:14], byteorder='big')
+        vida_id = int.from_bytes(txn[6:14], byteorder='big')
 
-        return ClaimVmIdTransaction(
+        return ClaimVidaIdTransaction(
             sender=to_hex(sender),
             nonce=nonce,
             size=len(txn),
-            vm_id=vm_id,
+            vida_id=vida_id,
             raw_transaction=txn,
             chain_id=txn[1]
         )
@@ -221,22 +221,22 @@ class TransactionDecoder:
         )
 
     @staticmethod
-    def decode_payable_vm_data_txn(txn: bytes, sender: bytes, nonce: int) -> 'PayableVmDataTransaction':
+    def decode_payable_vida_data_txn(txn: bytes, sender: bytes, nonce: int) -> 'PayableVidaDataTransaction':
         if len(txn) < 22:
-            raise ValueError("Invalid length for payable VM Data transaction")
+            raise ValueError("Invalid length for payable VIDA Data transaction")
 
-        external_vm_id = int.from_bytes(txn[6:14], byteorder='big')
+        external_vida_id = int.from_bytes(txn[6:14], byteorder='big')
 
-        data_length = len(txn) - 22 if PWRPY.is_vm_address(to_hex(sender)) else len(txn) - 87
+        data_length = len(txn) - 22 if PWRPY.is_vida_address(to_hex(sender)) else len(txn) - 87
 
         data = to_hex(txn[14:14+data_length])
         value = int.from_bytes(txn[14+data_length:22+data_length], byteorder='big')
 
-        return PayableVmDataTransaction(
+        return PayableVidaDataTransaction(
             sender=to_hex(sender),
             nonce=nonce,
             size=len(txn),
-            vm_id=external_vm_id,
+            vida_id=external_vida_id,
             data=data,
             value=value,
             raw_transaction=txn,
@@ -245,7 +245,7 @@ class TransactionDecoder:
 
     @staticmethod
     def decode_conduit_approval_txn(txn: bytes, sender: bytes, nonce: int) -> 'ConduitApprovalTransaction':
-        vm_id = int.from_bytes(txn[6:14], byteorder='big')
+        vida_id = int.from_bytes(txn[6:14], byteorder='big')
 
         wrapped_txns = []
         idx = 14
@@ -256,8 +256,8 @@ class TransactionDecoder:
             wrapped_txns.append(wrapped_txn)
             idx += 4 + txn_length
 
-        vm_address = PWRPY.get_vm_id_address(vm_id)
-        transactions = [TransactionDecoder.decode(wrapped_txn, vm_address) for wrapped_txn in wrapped_txns]
+        vida_address = PWRPY.get_vida_id_address(vida_id)
+        transactions = [TransactionDecoder.decode(wrapped_txn, vida_address) for wrapped_txn in wrapped_txns]
 
         return ConduitApprovalTransaction(
             sender=to_hex(sender),
@@ -270,7 +270,7 @@ class TransactionDecoder:
 
     @staticmethod
     def decode_set_conduits_txn(txn: bytes, sender: bytes, nonce: int) -> 'SetConduitsTransaction':
-        vm_id = int.from_bytes(txn[6:14], byteorder='big')
+        vida_id = int.from_bytes(txn[6:14], byteorder='big')
 
         conduits = []
         idx = 14
@@ -288,7 +288,7 @@ class TransactionDecoder:
             sender=to_hex(sender),
             nonce=nonce,
             size=len(txn),
-            vm_id=vm_id,
+            vida_id=vida_id,
             conduits=conduits,
             raw_transaction=txn,
             chain_id=txn[1]
@@ -296,7 +296,7 @@ class TransactionDecoder:
 
     @staticmethod
     def decode_add_conduits_txn(txn: bytes, sender: bytes, nonce: int) -> 'AddConduitsTransaction':
-        vm_id = int.from_bytes(txn[6:14], byteorder='big')
+        vida_id = int.from_bytes(txn[6:14], byteorder='big')
 
         conduits = []
         idx = 14
@@ -310,7 +310,7 @@ class TransactionDecoder:
             sender=to_hex(sender),
             nonce=nonce,
             size=len(txn),
-            vm_id=vm_id,
+            vida_id=vida_id,
             conduits=conduits,
             raw_transaction=txn,
             chain_id=txn[1]
@@ -318,7 +318,7 @@ class TransactionDecoder:
 
     @staticmethod
     def decode_remove_conduits_txn(txn: bytes, sender: bytes, nonce: int) -> 'RemoveConduitsTransaction':
-        vm_id = int.from_bytes(txn[6:14], byteorder='big')
+        vida_id = int.from_bytes(txn[6:14], byteorder='big')
 
         conduits = []
         idx = 14
@@ -332,7 +332,7 @@ class TransactionDecoder:
             sender=to_hex(sender),
             nonce=nonce,
             size=len(txn),
-            vm_id=vm_id,
+            vida_id=vida_id,
             conduits=conduits,
             raw_transaction=txn,
             chain_id=txn[1]
@@ -503,7 +503,7 @@ class TransactionDecoder:
         }
 
     @staticmethod
-    def decode_change_vm_id_claiming_fee_proposal_txn(txn: bytes, sender: bytes, nonce: int):
+    def decode_change_vida_id_claiming_fee_proposal_txn(txn: bytes, sender: bytes, nonce: int):
         title_length = int.from_bytes(txn[6:10], 'big')
         title = txn[10:10 + title_length].decode('utf-8')
         claiming_fee = int.from_bytes(txn[10 + title_length:10 + title_length + 8], 'big')
@@ -519,7 +519,7 @@ class TransactionDecoder:
         }
 
     @staticmethod
-    def decode_change_vm_owner_txn_fee_share_proposal_txn(txn: bytes, sender: bytes, nonce: int):
+    def decode_change_vida_owner_txn_fee_share_proposal_txn(txn: bytes, sender: bytes, nonce: int):
         title_length = int.from_bytes(txn[6:10], 'big')
         title = txn[10:10 + title_length].decode('utf-8')
         fee_share = int.from_bytes(txn[10 + title_length:10 + title_length + 4], 'big')

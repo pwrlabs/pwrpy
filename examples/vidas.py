@@ -1,17 +1,17 @@
 from pwrpy.pwrsdk import PWRPY
-from pwrpy.models.Transaction import VmDataTransaction
+from pwrpy.models.Transaction import VidaDataTransaction
 import json
 
-rpc = PWRPY("https://pwrrpc.pwrlabs.io/")
+rpc = PWRPY("http://46.101.151.203:8085/")
 
 vida_id = 1
 starting_block = rpc.get_latest_block_number()
 
-def handle_transaction(txn: VmDataTransaction):
+def handle_transaction(txn: VidaDataTransaction):
     try:
         sender = txn.sender
         data_hex = txn.data
-        data_bytes = bytes.fromhex(data_hex[2:])
+        data_bytes = bytes.fromhex(data_hex)
         obj = json.loads(data_bytes.decode('utf-8'))
 
         if obj["action"] == "send-message-v1":
