@@ -1,5 +1,5 @@
 from typing import Callable
-from pwrpy.models.Transaction import VmDataTransaction
+from pwrpy.models.Transaction import VidaDataTransaction
 import threading
 import time
 
@@ -8,7 +8,7 @@ class VidaTransactionSubscription:
                 rpc: 'PWRPY', # type: ignore
                 vida_id: int,
                 starting_block: int,
-                handler: Callable[['VmDataTransaction'], None],
+                handler: Callable[['VidaDataTransaction'], None],
                 poll_interval: int = 100):
         self.rpc = rpc
         self.vida_id = vida_id
@@ -45,7 +45,7 @@ class VidaTransactionSubscription:
                         effective_latest_block = current_block + 1000
                     
                     if effective_latest_block >= current_block:
-                        transactions = self.rpc.get_vm_data_txns(
+                        transactions = self.rpc.get_vida_data_txns(
                             current_block, effective_latest_block, self.vida_id)
 
                         for txn in transactions:
@@ -94,6 +94,6 @@ class VidaTransactionSubscription:
     def get_vida_id(self) -> int:
         return self.vida_id
     
-    def get_handler(self) -> Callable[['VmDataTransaction'], None]:
+    def get_handler(self) -> Callable[['VidaDataTransaction'], None]:
         return self.handler
     

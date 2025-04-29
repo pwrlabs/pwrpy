@@ -15,11 +15,11 @@ User.get_address()
 
 Guardian = PWRWallet(pwrpy=PWRPY("https://pwrrpc.pwrlabs.io/"), private_key=guardian_private_key)
 
-vmId = 897435
-vm_address = sdk.get_vm_id_address(vmId)
-print("VM ID address:", vm_address)
-print("Owner of VM ID :", sdk.get_owner_of_vm(vmId))
-print(f"{vm_address} is a VM Address: ", sdk.is_vm_address(vm_address))
+vidaId = 897435
+vida_address = sdk.get_vida_id_address(vidaId)
+print("VIDA ID address:", vida_address)
+print("Owner of VIDA ID :", sdk.get_owner_of_vida(vidaId))
+print(f"{vida_address} is a VIDA Address: ", sdk.is_vida_address(vida_address))
 
 # print(ORANGE + "Wallets :" + RESET)
 # print(GREEN + "\tUser wallet address:" + RESET, User.get_address())
@@ -41,24 +41,24 @@ print(GREEN + "\tTransfer PWR error:" + RESET, response.message)
 # print(GREEN + "\tDelegate error:" + RESET, response.message)
 #
 #
-# print(ORANGE + "Claim VM ID test:" + RESET)
-# response = User.claim_vm_id(vmId, User.get_nonce().data)
-# print(GREEN + "\tClaim VM ID success:" + RESET, response.success)
-# print(GREEN + "\tClaim VM ID txn hash:" + RESET, response.data)
-# print(GREEN + "\tClaim VM ID error:" + RESET, response.message)
+# print(ORANGE + "Claim VIDA ID test:" + RESET)
+# response = User.claim_vida_id(vidaId, User.get_nonce().data)
+# print(GREEN + "\tClaim VIDA ID success:" + RESET, response.success)
+# print(GREEN + "\tClaim VIDA ID txn hash:" + RESET, response.data)
+# print(GREEN + "\tClaim VIDA ID error:" + RESET, response.message)
 #
 #
-# print(ORANGE + "Send VM Data test:" + RESET)
-# response = User.send_vm_data_transaction(vmId, b"Hello world", User.get_nonce().data)
-# print(GREEN + "\tSend VM Data success:" + RESET, response.success)
-# print(GREEN + "\tSend VM Data txn hash:" + RESET, response.data)
-# print(GREEN + "\tSend VM Data error:" + RESET, response.message)
+# print(ORANGE + "Send VIDA Data test:" + RESET)
+# response = User.send_vida_data_transaction(vidaId, b"Hello world", User.get_nonce().data)
+# print(GREEN + "\tSend VIDA Data success:" + RESET, response.success)
+# print(GREEN + "\tSend VIDA Data txn hash:" + RESET, response.data)
+# print(GREEN + "\tSend VIDA Data error:" + RESET, response.message)
 #
-# print(ORANGE + "Send Payable VM Data test:" + RESET)
-# response = User.send_payable_vm_data_transaction(vmId, 1 * 10**9, b"HELLO I AM A BIGGER MESSAGE", User.get_nonce().data)
-# print(GREEN + "\tSend Payable VM Data success:" + RESET, response.success)
-# print(GREEN + "\tSend Payable VM Data txn hash:" + RESET, response.data)
-# print(GREEN + "\tSend Payable VM Data error:" + RESET, response.message)
+# print(ORANGE + "Send Payable VIDA Data test:" + RESET)
+# response = User.send_payable_vida_data_transaction(vidaId, 1 * 10**9, b"HELLO I AM A BIGGER MESSAGE", User.get_nonce().data)
+# print(GREEN + "\tSend Payable VIDA Data success:" + RESET, response.success)
+# print(GREEN + "\tSend Payable VIDA Data txn hash:" + RESET, response.data)
+# print(GREEN + "\tSend Payable VIDA Data error:" + RESET, response.message)
 #
 # print(ORANGE + "Get Delegated PWR test:" + RESET)
 # while sdk.get_delegated_pwr(User.get_address(), "0x61Bd8fc1e30526Aaf1C4706Ada595d6d236d9883") == 0:
