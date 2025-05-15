@@ -110,12 +110,8 @@ class PWRPY:
             url = self.get_rpc_node_url() + "/nonceOfUser?userAddress=" + address
             responseRaw = get_response(url, self.timeout)
             response = responseRaw.json()
-
-            if responseRaw.status_code != 200:
-                return ApiResponse(False, response.get("message"))
-            else:
-                return ApiResponse(True, response.get("message"), response.get("nonce")).data
-
+            nonce = response.get("nonce")
+            return nonce
         except Exception as e:
             return ApiResponse(False, str(e))
 

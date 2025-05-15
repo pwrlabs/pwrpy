@@ -4,8 +4,11 @@ from pathlib import Path
 import sha3
 from pwrpy.Utils.Falcon import Falcon
 from pwrpy.TransactionBuilder import TransactionBuilder
-from pwrpy.pwrsdk import PWRPY
+from pwrpy.pwrsdk import PWRPY, get_response
 from Crypto.Hash import keccak
+from pwrpy.Utils.AES256 import AES256
+
+falcon_server_url = "http://localhost:3000"
 
 class Wallet:
     def __init__(
@@ -13,11 +16,13 @@ class Wallet:
             public_key: bytes = None,
             private_key: bytes = None,
             address: bytes = None,
+            seed_phrase: bytes = None,
             pwrpy: PWRPY = None
         ):
         self.public_key = public_key
         self.private_key = private_key
         self.address = address
+        self.seed_phrase = seed_phrase
 
         if pwrpy is None:
             self.pwrpy = PWRPY("https://pwrrpc.pwrlabs.io/")
@@ -25,99 +30,88 @@ class Wallet:
             self.pwrpy = pwrpy
 
     @classmethod
-    def new(cls, pwrpy: PWRPY = PWRPY("https://pwrrpc.pwrlabs.io/")) -> 'Wallet':
-        # Assuming Falcon class exists in Python
-        public_key, private_key = Falcon.generate_keypair_512()
-        
-        # Get the hash of the public key
-        hash_bytes = cls.__hash224(public_key)
+    def new_random(cls, word_count: int, pwrpy: PWRPY = PWRPY("https://pwrrpc.pwrlabs.io/")) -> 'Wallet':
+        entropy_bytes = {
+            12: 16,  # 128 bits
+            15: 20,  # 160 bits
+            18: 24,  # 192 bits
+            21: 28,  # 224 bits
+            24: 32   # 256 bits
+        }.get(word_count)
+
+        if entropy_bytes is None:
+            raise ValueError(f"Invalid word count: {word_count}. Must be 12, 15, 18, 21, or 24")
+
+        url = falcon_server_url + "/generateRandomKeypair?wordCount=" + word_count
+        response = get_response(url, (20, 20))
+        data = response.json().get('data')
+        public_key: str = data.get('publicKey')
+        private_key: str = data.get('secretKey')
+        seed_phrase: str = data.get('seedPhrase')
+
+        public_key_bytes = bytes.fromhex(public_key)
+        private_key_bytes = bytes.fromhex(private_key)
+        seed_phrase_bytes = bytes(seed_phrase, 'utf-8')
+
+        hash_bytes = cls.__hash224(public_key_bytes[1:])
         address = hash_bytes[:20]
 
         return cls(
-            public_key=public_key,
-            private_key=private_key,
+            public_key=public_key_bytes,
+            private_key=private_key_bytes,
             address=address,
+            seed_phrase=seed_phrase_bytes,
             pwrpy=pwrpy
         )
 
     @classmethod
-    def from_keys(cls, public_key: bytes, private_key: bytes, pwrpy: PWRPY = PWRPY("https://pwrrpc.pwrlabs.io/")) -> 'Wallet':
+    def new(cls, seed_phrase: str, pwrpy: PWRPY = PWRPY("https://pwrrpc.pwrlabs.io/")) -> 'Wallet':
+        seed_hex = seed_phrase.encode('utf-8').hex()
+        url = f"{falcon_server_url}/generateKeypair?seed={seed_hex}"
+        response = get_response(url, (20, 20))
+        data = response.json().get('data')
+        public_key = data.get('publicKey')
+        private_key = data.get('secretKey')
+
+        public_key_bytes = bytes.fromhex(public_key)
+        private_key_bytes = bytes.fromhex(private_key)
+
         # Get the hash of the public key
-        hash_bytes = cls.__hash224(public_key)
+        hash_bytes = cls.__hash224(public_key_bytes[1:])
         address = hash_bytes[:20]
 
         return cls(
-            public_key=public_key,
-            private_key=private_key,
+            public_key=public_key_bytes,
+            private_key=private_key_bytes,
             address=address,
+            seed_phrase=seed_phrase.encode('utf-8'),
             pwrpy=pwrpy
         )
 
-    def store_wallet(self, file_path: Union[str, Path]) -> None:
-        buffer = bytearray()
+    def store_wallet(self, path: str, password: str) -> None:
+        try:
+            # Convert seed phrase to bytes if it's a string
+            seed_phrase_bytes = self.seed_phrase.encode('utf-8') if isinstance(self.seed_phrase, str) else self.seed_phrase
+            encrypted_seed_phrase = AES256.encrypt(seed_phrase_bytes, password)
 
-        # Add public key length and data
-        buffer.extend(struct.pack('>I', len(self.public_key)))
-        buffer.extend(self.public_key)
-        
-        # Add private key length and data
-        buffer.extend(struct.pack('>I', len(self.private_key)))
-        buffer.extend(self.private_key)
-    
-        with open(file_path, 'wb') as f:
-            f.write(buffer)
-    
-    @classmethod
-    def load_wallet(cls, file_path: Union[str, Path], pwrpy: PWRPY = PWRPY("https://pwrrpc.pwrlabs.io/")) -> 'Wallet':
-        with open(file_path, 'rb') as f:
-            data = f.read()
-        
-        if len(data) < 8:  # At minimum we need two 4-byte length fields
-            raise ValueError(f"File too small: {len(data)} bytes")
-    
-        cursor = 0
-        
-        # Read public key length
-        pub_length = struct.unpack('>I', data[cursor:cursor+4])[0]
-        cursor += 4
-        
-        if pub_length == 0 or pub_length > 2048:
-            raise ValueError(f"Invalid public key length: {pub_length}")
-        
-        if cursor + pub_length > len(data):
-            raise ValueError(f"File too small for public key of length {pub_length}")
-        
-        # Read public key
-        public_key_bytes = data[cursor:cursor+pub_length]
-        cursor += pub_length
-        
-        if cursor + 4 > len(data):
-            raise ValueError("File too small for private key length")
-        
-        # Read private key length
-        sec_length = struct.unpack('>I', data[cursor:cursor+4])[0]
-        cursor += 4
-        
-        if sec_length == 0 or sec_length > 4096:
-            raise ValueError(f"Invalid private key length: {sec_length}")
-        
-        if cursor + sec_length > len(data):
-            raise ValueError(f"File too small for private key of length {sec_length}")
-        
-        # Read private key
-        private_key_bytes = data[cursor:cursor+sec_length]
-        
-        try:
-            public_key = public_key_bytes
+            with open(path, 'wb') as f:
+                f.write(encrypted_seed_phrase)
         except Exception as e:
-            raise ValueError(f"Failed to parse public key: {e}")
+            raise Exception(f"Failed to store wallet: {str(e)}")
         
+    @staticmethod
+    def load_wallet(path: str, password: str, pwrpy: PWRPY = None) -> 'Wallet':
         try:
-            private_key = private_key_bytes
+            with open(path, 'rb') as f:
+                encrypted_seed_phrase = f.read()
+            
+            seed_phrase_bytes = AES256.decrypt(encrypted_seed_phrase, password)
+            seed_phrase = seed_phrase_bytes.decode('utf-8')
+            
+            return Wallet.new(seed_phrase, pwrpy)
         except Exception as e:
-            raise ValueError(f"Failed to parse private key: {e}")
-        
-        return cls.from_keys(public_key, private_key, pwrpy)
+            print(f"Error loading wallet: {e}")
+            return None
     
     def sign(self, message: bytes) -> bytes:
         signature = Falcon.sign_512(message, self.private_key)
@@ -129,6 +123,9 @@ class Wallet:
 
     def get_address(self) -> str:
         return f"0x{self.address.hex()}"
+    
+    def get_seed_phrase(self) -> str:
+        return self.seed_phrase.decode('utf-8')
 
     def get_public_key(self) -> bytes:
         return self.public_key
@@ -781,3 +778,32 @@ class Wallet:
         k = sha3.keccak_224()
         k.update(input_bytes)
         return k.digest()
+    
+    # @staticmethod
+    # def __generate_seed(mnemonic: Union[bytes, bytearray], passphrase: str) -> bytes:
+    #     """
+    #     Generate a seed from a mnemonic phrase using PBKDF2.
+        
+    #     Args:
+    #         mnemonic: The mnemonic phrase as bytes
+    #         passphrase: The passphrase to use for seed generation
+            
+    #     Returns:
+    #         bytes: The generated 64-byte seed
+    #     """
+    #     mnemonic_bytes = bytes(mnemonic)    
+    #     salt = b"mnemonic" + passphrase.encode('utf-8')
+        
+    #     # Use PBKDF2 with SHA512
+    #     # Parameters:
+    #     # - mnemonic as the password
+    #     # - "mnemonic" + passphrase as the salt
+    #     # - 2048 iterations
+    #     # - 64 bytes output (512 bits)
+    #     return hashlib.pbkdf2_hmac(
+    #         'sha512',
+    #         mnemonic_bytes,
+    #         salt,
+    #         2048,
+    #         64
+    #     )

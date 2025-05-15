@@ -26,10 +26,11 @@ class TransactionForGuardianApproval:
 
 
 class ApiResponse:
-    def __init__(self, success, message, data=None):
+    def __init__(self, success, message, hash=None):
         self.success = success
         self.message = message
-        self.data = data
+        self.error = message
+        self.hash = hash
 
 
 class EarlyWithdrawPenaltyResponse:
