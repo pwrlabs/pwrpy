@@ -217,8 +217,6 @@ def generate_keypair_from_seed(log_n: int, seed: bytes) -> KeyPair:
     pub_key = create_string_buffer(pub_key_size)
     tmp = create_string_buffer(tmp_size)
 
-    print(f"Random bytes: {[b for b in seed]}")
-
     # Initialize PRNG with seed
     rng = PRNGContext()
     libfalcon.prng_init(byref(rng))
