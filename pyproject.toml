@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pwrpy"
-version = "6.0.8"
+version = "6.0.7"
 description = "PWRPY is a Python library for interacting with the PWR network."
 readme = "README.md"
 license = "MIT"
@@ -22,6 +22,7 @@ python-dotenv = "^1.0.0"
 cryptography = "^44.0.2"
 safe-pysha3 = "^1.0.4"
 liboqs-pwr = "^0.12.1"
+mnemonic = "^0.21"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.2.2"

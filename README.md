@@ -45,21 +45,38 @@ Play with [Code Examples](https://github.com/keep-pwr-strong/pwr-examples/) 🎮
 
 ```python
 from pwrpy.pwrsdk import PWRPY
-from pwrpy.pwrwallet import PWRWallet
+from pwrpy.pwrwallet import Wallet
 ```
 
-**Set your rpc and wallet:**
+**Set your RPC node:**
 
 ```python
-private_key = "0xac0974bec...f80"
 pwr = PWRPY("https://pwrrpc.pwrlabs.io/")
-wallet = PWRWallet(private_key)
+```
+
+**Generate a new random wallet:**
+
+```python
+wallet = Wallet.new_random(12)
+```
+
+**Import wallet by Seed Phrase:**
+
+```python
+seed_phrase = "your seed phrase here"
+wallet = Wallet.new(seed_phrase)
 ```
 
 **Get wallet address:**
 
 ```python
 address = wallet.get_address()
+```
+
+**Get wallet seed phrase:**
+
+```python
+seed_phrase = wallet.get_seed_phrase()
 ```
 
 **Get wallet balance:**
@@ -77,14 +94,20 @@ pk = wallet.get_private_key()
 **Transfer PWR tokens:**
 
 ```python
-response = wallet.transfer_pwr("recipientAddress", 100000)
+response = wallet.transfer_pwr("recipientAddress", "amount", "fee_per_byte")
 ```
 
 Sending a transcation to the PWR Chain returns a Response object, which specified if the transaction was a success, and returns relevant data.
 If the transaction was a success, you can retrieive the transaction hash, if it failed, you can fetch the error.
 
 ```python
-response = wallet.transfer_pwr("recipientAddress", 100000)
+from pwrpy.pwrwallet import Wallet
+seed_phrase = "your seed phrase here"
+wallet = Wallet.new(seed_phrase)
+amount = 1000
+fee_per_byte = wallet.get_rpc().get_fee_per_byte()
+
+response = wallet.transfer_pwr("recipientAddress", amount, fee_per_byte)
 if response.success:
     print("Transfer:", response.__dict__)
 else:
@@ -94,8 +117,15 @@ else:
 **Send data to a VIDA:**
 
 ```python
+from pwrpy.pwrwallet import Wallet
+seed_phrase = "your seed phrase here"
+wallet = Wallet.new(seed_phrase)
+
+vida_id = 123
 data = "Hello World!"
-response = wallet.send_vida_data(123, data.encode())
+fee_per_byte = wallet.get_rpc().get_fee_per_byte()
+
+response = wallet.send_vida_data(vida_id, data.encode(), fee_per_byte)
 if response.success:
     print("SendVidaData:", response.__dict__)
 else:
@@ -146,15 +176,6 @@ vida_id = 123
 transactions = pwr.get_vida_data_txns(start_block, end_block, vida_id)
 for txs in transactions:
     print("Data:", txs.data)
-```
-
-**Broadcast Txn:**
-
-Broadcasts a signed transaction to the network.
-
-```python
-signedTransaction = "..."
-broadcast = pwr.broadcast_transaction(signedTransaction)
 ```
 
 ## ✏️ Contributing
