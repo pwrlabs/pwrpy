@@ -1,12 +1,13 @@
-import struct
 from typing import Union, List
-from pathlib import Path
 import sha3
 from pwrpy.Utils.Falcon import Falcon
 from pwrpy.TransactionBuilder import TransactionBuilder
-from pwrpy.pwrsdk import PWRPY, get_response
+from pwrpy.pwrsdk import PWRPY
 from Crypto.Hash import keccak
 from pwrpy.Utils.AES256 import AES256
+import hashlib
+import os
+from mnemonic import Mnemonic
 
 falcon_server_url = "http://localhost:3000"
 
@@ -31,60 +32,68 @@ class Wallet:
 
     @classmethod
     def new_random(cls, word_count: int, pwrpy: PWRPY = PWRPY("https://pwrrpc.pwrlabs.io/")) -> 'Wallet':
-        entropy_bytes = {
-            12: 16,  # 128 bits
-            15: 20,  # 160 bits
-            18: 24,  # 192 bits
-            21: 28,  # 224 bits
-            24: 32   # 256 bits
-        }.get(word_count)
-
-        if entropy_bytes is None:
+        # Map word count to entropy bytes
+        if word_count == 12:
+            entropy_bytes = 16  # 128 bits
+        elif word_count == 15:
+            entropy_bytes = 20  # 160 bits 
+        elif word_count == 18:
+            entropy_bytes = 24  # 192 bits
+        elif word_count == 21:
+            entropy_bytes = 28  # 224 bits
+        elif word_count == 24:
+            entropy_bytes = 32  # 256 bits
+        else:
             raise ValueError(f"Invalid word count: {word_count}. Must be 12, 15, 18, 21, or 24")
 
-        url = falcon_server_url + "/generateRandomKeypair?wordCount=" + word_count
-        response = get_response(url, (20, 20))
-        data = response.json().get('data')
-        public_key: str = data.get('publicKey')
-        private_key: str = data.get('secretKey')
-        seed_phrase: str = data.get('seedPhrase')
+        # Generate random entropy
+        try:
+            entropy = os.urandom(entropy_bytes)
+        except Exception as e:
+            raise RuntimeError(f"Failed to generate entropy: {str(e)}")
 
-        public_key_bytes = bytes.fromhex(public_key)
-        private_key_bytes = bytes.fromhex(private_key)
-        seed_phrase_bytes = bytes(seed_phrase, 'utf-8')
+        # Generate mnemonic from entropy
+        try:
+            mnemo = Mnemonic("english")
+            mnemonic = mnemo.to_mnemonic(entropy)
+        except Exception as e:
+            raise RuntimeError(f"Failed to generate mnemonic: {str(e)}")
 
-        hash_bytes = cls.__hash224(public_key_bytes[1:])
+        # Generate seed from mnemonic
+        seed = cls.__generate_seed(mnemonic.encode('utf-8'), "")
+
+        # Generate key pair from seed
+        try:
+            public_key, private_key = Falcon.generate_keypair_512_from_seed(seed)
+        except Exception as e:
+            raise RuntimeError(f"Failed to generate key pair: {str(e)}")
+
+        hash_bytes = cls.__hash224(public_key[1:])
         address = hash_bytes[:20]
 
         return cls(
-            public_key=public_key_bytes,
-            private_key=private_key_bytes,
+            public_key=public_key,
+            private_key=private_key,
             address=address,
-            seed_phrase=seed_phrase_bytes,
+            seed_phrase=mnemonic.encode('utf-8'),
             pwrpy=pwrpy
         )
 
     @classmethod
     def new(cls, seed_phrase: str, pwrpy: PWRPY = PWRPY("https://pwrrpc.pwrlabs.io/")) -> 'Wallet':
-        seed_hex = seed_phrase.encode('utf-8').hex()
-        url = f"{falcon_server_url}/generateKeypair?seed={seed_hex}"
-        response = get_response(url, (20, 20))
-        data = response.json().get('data')
-        public_key = data.get('publicKey')
-        private_key = data.get('secretKey')
-
-        public_key_bytes = bytes.fromhex(public_key)
-        private_key_bytes = bytes.fromhex(private_key)
+        seed_phrase_bytes = seed_phrase.encode('utf-8')
+        seed = cls.__generate_seed(seed_phrase_bytes, "")
+        public_key, private_key = Falcon.generate_keypair_512_from_seed(seed)
 
         # Get the hash of the public key
-        hash_bytes = cls.__hash224(public_key_bytes[1:])
+        hash_bytes = cls.__hash224(public_key[1:])
         address = hash_bytes[:20]
 
         return cls(
-            public_key=public_key_bytes,
-            private_key=private_key_bytes,
+            public_key=public_key,
+            private_key=private_key,
             address=address,
-            seed_phrase=seed_phrase.encode('utf-8'),
+            seed_phrase=seed_phrase_bytes,
             pwrpy=pwrpy
         )
 
@@ -779,31 +788,31 @@ class Wallet:
         k.update(input_bytes)
         return k.digest()
     
-    # @staticmethod
-    # def __generate_seed(mnemonic: Union[bytes, bytearray], passphrase: str) -> bytes:
-    #     """
-    #     Generate a seed from a mnemonic phrase using PBKDF2.
+    @staticmethod
+    def __generate_seed(mnemonic: Union[bytes, bytearray], passphrase: str) -> bytes:
+        """
+        Generate a seed from a mnemonic phrase using PBKDF2.
         
-    #     Args:
-    #         mnemonic: The mnemonic phrase as bytes
-    #         passphrase: The passphrase to use for seed generation
+        Args:
+            mnemonic: The mnemonic phrase as bytes
+            passphrase: The passphrase to use for seed generation
             
-    #     Returns:
-    #         bytes: The generated 64-byte seed
-    #     """
-    #     mnemonic_bytes = bytes(mnemonic)    
-    #     salt = b"mnemonic" + passphrase.encode('utf-8')
+        Returns:
+            bytes: The generated 64-byte seed
+        """
+        mnemonic_bytes = bytes(mnemonic)    
+        salt = b"mnemonic" + passphrase.encode('utf-8')
         
-    #     # Use PBKDF2 with SHA512
-    #     # Parameters:
-    #     # - mnemonic as the password
-    #     # - "mnemonic" + passphrase as the salt
-    #     # - 2048 iterations
-    #     # - 64 bytes output (512 bits)
-    #     return hashlib.pbkdf2_hmac(
-    #         'sha512',
-    #         mnemonic_bytes,
-    #         salt,
-    #         2048,
-    #         64
-    #     )
+        # Use PBKDF2 with SHA512
+        # Parameters:
+        # - mnemonic as the password
+        # - "mnemonic" + passphrase as the salt
+        # - 2048 iterations
+        # - 64 bytes output (512 bits)
+        return hashlib.pbkdf2_hmac(
+            'sha512',
+            mnemonic_bytes,
+            salt,
+            2048,
+            64
+        )
