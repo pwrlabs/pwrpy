@@ -37,8 +37,8 @@ print(GREEN + "Block:" + RESET, block.__dict__)
 active_voting_power = pwr.get_active_voting_power()
 print(GREEN + "ActiveVotingPower:" + RESET, active_voting_power)
 
-start_block = 9079
-end_block = 9086
+start_block = 85411
+end_block = 85420
 vida_id = 123
 transactions = pwr.get_vida_data_txns(start_block, end_block, vida_id)
 print(GREEN + "Transactions:" + RESET, transactions)
