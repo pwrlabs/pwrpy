@@ -6,7 +6,7 @@ from binascii import hexlify
 from typing import Callable
 
 from pwrpy.models.Transaction import Transaction, GuardianApprovalTransaction
-from pwrpy.models.Transaction import VidaDataTransaction
+from pwrpy.models.Transaction import VidaDataTransaction, TransactionResponse
 from pwrpy.models.Block import Block
 from pwrpy.models.Validator import Validator
 from pwrpy.models.Response import ApiResponse, TransactionForGuardianApproval, EarlyWithdrawPenaltyResponse
@@ -306,7 +306,7 @@ class PWRPY:
         latest_block_number = self.get_blocks_count() - 1
         return latest_block_number
 
-    def get_vida_data_txns(self, starting_block: int, ending_block: int, vida_id: int):
+    def get_vida_data_transactions(self, starting_block: int, ending_block: int, vida_id: int):
         url = f"{self.__rpc_node_url}/getVidaTransactions?startingBlock={starting_block}&endingBlock={ending_block}&vidaId={vida_id}"
         response = get_response(url, self.timeout)
         if response.status_code == 200:
@@ -325,7 +325,7 @@ class PWRPY:
             return txn_array
         return None
 
-    def get_vida_data_txns_filter_by_byte_prefix(self, starting_block: int, ending_block: int, vida_id: int,
+    def get_vida_data_transactions_filter_by_byte_prefix(self, starting_block: int, ending_block: int, vida_id: int,
                                                prefix: bytearray):
         url = f"{self.get_rpc_node_url()}/getVidaTransactionsSortByBytePrefix?startingBlock={starting_block}&endingBlock={ending_block}&vidaId={vida_id}&bytePrefix={hexlify(prefix).decode()}"
         response = get_response(url, self.timeout)
@@ -748,7 +748,14 @@ class PWRPY:
         penalties = {int(k): v for k, v in penalties_obj.items()}
 
         return penalties
-    
+
+    def get_transaction_by_hash(self, transaction_hash: str):
+        url = f"{self.__rpc_node_url}/transactionByHash?transactionHash={transaction_hash}"
+        response = get_response(url, self.timeout)
+        data = response.json()
+        tx_data = data.get('transaction')
+        return TransactionResponse.from_json(tx_data)
+
     def subscribe_to_vida_transactions(
         self,
         vida_id: int,

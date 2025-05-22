@@ -3,6 +3,31 @@ from typing import List
 from pwrpy.models.Transaction import Transaction
 
 
+class BlockTransaction:
+    def __init__(self, identifier: int = 0, transaction_hash: str = "0x"):
+        self.identifier = identifier
+        self.transaction_hash = transaction_hash
+
+    @classmethod
+    def from_json(cls, json_data: dict):
+        return cls(
+            identifier=json_data.get('identifier', 0),
+            transaction_hash=json_data.get('transactionHash', '0x')
+        )
+
+    def to_json(self) -> dict:
+        return {
+            'identifier': self.identifier,
+            'transactionHash': self.transaction_hash
+        }
+
+    def __str__(self) -> str:
+        return f"BlockTransaction(identifier={self.identifier}, hash={self.transaction_hash})"
+
+    def __repr__(self) -> str:
+        return self.__str__()
+
+
 class Block:
     def __init__(self, transaction_count, size, number, reward,
                  timestamp, hash_value, submitter,
@@ -31,7 +56,7 @@ class Block:
 
         txns = block_json.get("transactions", [])
         transactions = [
-            Transaction.from_json(txn, number, timestamp, i) for i, txn in enumerate(txns)
+            BlockTransaction.from_json(txn) for txn in txns
         ]
 
         return cls(transaction_count, size, number, reward,
