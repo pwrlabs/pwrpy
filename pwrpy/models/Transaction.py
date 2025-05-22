@@ -909,3 +909,88 @@ class VoteOnProposalTransaction(Transaction):
         transaction["proposalHash"] = self.proposal_hash
         transaction["vote"] = self.vote
         return transaction
+
+
+class TransactionResponse:
+    def __init__(self, 
+                 identifier: int = 0,
+                 paid_total_fee: int = 0,
+                 amount: int = 0,
+                 paid_action_fee: int = 0,
+                 nonce: int = 0,
+                 transaction_hash: str = "0x",
+                 time_stamp: int = 0,
+                 fee_per_byte: int = 0,
+                 size: int = 0,
+                 sender: str = "0x",
+                 success: bool = False,
+                 block_number: int = 0,
+                 position_in_the_block: int = 0,
+                 vida_id: int = 0,
+                 receiver: str = "0x",
+                 data: bytes = b''):
+        self.identifier = identifier
+        self.paid_total_fee = paid_total_fee
+        self.amount = amount
+        self.paid_action_fee = paid_action_fee
+        self.nonce = nonce
+        self.transaction_hash = transaction_hash
+        self.time_stamp = time_stamp
+        self.fee_per_byte = fee_per_byte
+        self.size = size
+        self.sender = sender
+        self.success = success
+        self.block_number = block_number
+        self.position_in_the_block = position_in_the_block
+        self.vida_id = vida_id
+        self.receiver = receiver
+        self.data = data
+
+    @classmethod
+    def from_json(cls, json_data: dict):
+        return cls(
+            identifier=json_data.get('identifier', 0),
+            paid_total_fee=json_data.get('paidTotalFee', 0),
+            amount=json_data.get('amount', 0),
+            paid_action_fee=json_data.get('paidActionFee', 0),
+            nonce=json_data.get('nonce', 0),
+            transaction_hash=json_data.get('transactionHash', '0x'),
+            time_stamp=json_data.get('timeStamp', 0),
+            fee_per_byte=json_data.get('feePerByte', 0),
+            size=json_data.get('size', 0),
+            sender=json_data.get('sender', '0x'),
+            success=json_data.get('success', False),
+            block_number=json_data.get('blockNumber', 0),
+            position_in_the_block=json_data.get('positionInTheBlock', 0),
+            vida_id=json_data.get('vidaId', 0),
+            receiver=json_data.get('receiver', '0x'),
+            data=bytes.fromhex(json_data.get('data', ''))
+        )
+
+    def to_json(self) -> dict:
+        return {
+            'identifier': self.identifier,
+            'paidTotalFee': self.paid_total_fee,
+            'amount': self.amount,
+            'paidActionFee': self.paid_action_fee,
+            'nonce': self.nonce,
+            'transactionHash': self.transaction_hash,
+            'timeStamp': self.time_stamp,
+            'feePerByte': self.fee_per_byte,
+            'size': self.size,
+            'sender': self.sender,
+            'success': self.success,
+            'blockNumber': self.block_number,
+            'positionInTheBlock': self.position_in_the_block,
+            'vidaId': self.vida_id,
+            'receiver': self.receiver,
+            'data': self.data.hex()
+        }
+
+    def __str__(self) -> str:
+        """Returns a string representation of the transaction."""
+        return f"TransactionResponse(hash={self.transaction_hash}, sender={self.sender}, receiver={self.receiver}, amount={self.amount}, success={self.success})"
+
+    def __repr__(self) -> str:
+        """Returns a detailed string representation of the transaction."""
+        return f"TransactionResponse(identifier={self.identifier}, hash={self.transaction_hash}, sender={self.sender}, receiver={self.receiver}, amount={self.amount}, success={self.success}, block={self.block_number}, position={self.position_in_the_block})"
