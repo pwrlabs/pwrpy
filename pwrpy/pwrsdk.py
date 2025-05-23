@@ -357,7 +357,6 @@ class PWRPY:
         url = f"{self.__rpc_node_url}/delegateesOfUser?userAddress={address}"
         response = get_response(url, self.timeout)
         data = response.json()
-        print(data)
         validator_objects = data.get('validators')
         delegatees = []
         if validator_objects is None:
