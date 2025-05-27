@@ -173,7 +173,7 @@ start_block = 843500
 end_block = 843750
 vida_id = 123
 
-transactions = pwr.get_vida_data_txns(start_block, end_block, vida_id)
+transactions = pwr.get_vida_data_transactions(start_block, end_block, vida_id)
 for txs in transactions:
     print("Data:", txs.data)
 ```

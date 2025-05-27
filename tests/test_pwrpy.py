@@ -52,7 +52,7 @@ ORANGE = "\033[93m"
 #
 # print(GREEN + "Standby validators:" + RESET, sdk.get_standby_validators())
 # print(GREEN + "Active Validators:" + RESET, sdk.get_active_validators())
-# print(GREEN + "Transactions from block 1 to 4:" + RESET, sdk.get_vida_data_txns(1, 4, 10023))
+# print(GREEN + "Transactions from block 1 to 4:" + RESET, sdk.get_vida_data_transactions(1, 4, 10023))
 # print(GREEN + "Owner of vida 100:" + RESET, sdk.get_owner_of_vida(100))
 # print(GREEN + "Nonce:" + RESET, sdk.get_nonce_of_address(address))
 # print(GREEN + "Balance:" + RESET, sdk.get_balance_of_address(address))

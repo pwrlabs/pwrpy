@@ -16,6 +16,12 @@ print(ORANGE + "Tests for Governance Update" + RESET)
 address = wallet.get_address()
 print(GREEN + "Address:" + RESET, address)
 
+block = pwr.get_block_by_number(123741)        
+# prints the sender address from every transaction in the block
+for index, txs in enumerate(block.transactions):
+    transaction = pwr.get_transaction_by_hash(txs.transaction_hash)
+    print(f"Sender {index}: {transaction.sender}")
+
 seed_phrase = wallet.get_seed_phrase()
 print(GREEN + "Seed Phrase:" + RESET, seed_phrase)
 
@@ -40,8 +46,13 @@ print(GREEN + "ActiveVotingPower:" + RESET, active_voting_power)
 start_block = 85411
 end_block = 85420
 vida_id = 123
-transactions = pwr.get_vida_data_txns(start_block, end_block, vida_id)
+transactions = pwr.get_vida_data_transactions(start_block, end_block, vida_id)
 print(GREEN + "Transactions:" + RESET, transactions)
+
+transactions = pwr.get_vida_data_transactions(start_block, end_block, vida_id)
+# prints the trasnactions data
+for txs in transactions:
+    print("Data:", txs.data)
 
 total_validators_count = pwr.get_all_validators()
 print(GREEN + "TotalValidatorsCount:" + RESET, total_validators_count)

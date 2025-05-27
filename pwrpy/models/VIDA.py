@@ -45,7 +45,7 @@ class VidaTransactionSubscription:
                         effective_latest_block = current_block + 1000
                     
                     if effective_latest_block >= current_block:
-                        transactions = self.rpc.get_vida_data_txns(
+                        transactions = self.rpc.get_vida_data_transactions(
                             current_block, effective_latest_block, self.vida_id)
 
                         for txn in transactions:
