@@ -65,7 +65,7 @@ class MerkleTree:
                 raise ValueError(f"There is already an open instance of tree: {tree_name}")
         
         self.tree_name = tree_name
-        self.path = f"merkleTreeLite/{tree_name}"
+        self.path = f"merkleTree/{tree_name}"
         
         # Database handles (file paths)
         self.metadata_path = os.path.join(self.path, self.METADATA_DB_NAME)
