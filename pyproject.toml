@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pwrpy"
-version = "6.0.9-alpha2"
+version = "6.0.9"
 description = "PWRPY is a Python library for interacting with the PWR network."
 readme = "README.md"
 license = "MIT"
