@@ -182,7 +182,7 @@ class VidaTransactionSubscription:
         return self.handler
     
     def get_pwrj(self) -> 'PWRPY':  # type: ignore
-        """Get the PWRPY instance (equivalent to getPwrj in Java)."""
+        """Get the PWRPY instance."""
         return self.rpc
     
     def _shutdown_hook(self):
