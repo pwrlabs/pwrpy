@@ -3,7 +3,7 @@ import requests
 from eth_hash.auto import keccak
 from requests.exceptions import Timeout, RequestException
 from binascii import hexlify
-from typing import Callable
+from typing import Callable, Optional
 
 from pwrpy.models.Transaction import Transaction, GuardianApprovalTransaction
 from pwrpy.models.Transaction import VidaDataTransaction, TransactionResponse
@@ -760,6 +760,7 @@ class PWRPY:
         vida_id: int,
         starting_block: int,
         handler: Callable[[VidaDataTransaction], None],
+        block_saver: Optional[Callable[[int], None]] = None,
         poll_interval: int = 100
     ) -> VidaTransactionSubscription:
         subscription = VidaTransactionSubscription(
@@ -767,7 +768,8 @@ class PWRPY:
             vida_id=vida_id,
             starting_block=starting_block,
             handler=handler,
-            poll_interval=poll_interval
+            poll_interval=poll_interval,
+            block_saver=block_saver
         )
         subscription.start()
         return subscription

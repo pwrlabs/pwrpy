@@ -2,7 +2,7 @@ from pwrpy.pwrsdk import PWRPY
 from pwrpy.models.Transaction import VidaDataTransaction
 import json
 
-rpc = PWRPY("http://46.101.151.203:8085/")
+rpc = PWRPY("https://pwrrpc.pwrlabs.io/")
 
 vida_id = 1
 starting_block = rpc.get_latest_block_number()
